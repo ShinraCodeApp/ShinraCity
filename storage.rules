@@ -1,0 +1,58 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isCurrentUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*')
+        && request.resource.size < 10 * 1024 * 1024; // 10MB
+    }
+
+    function isValidAvatar() {
+      return request.resource.contentType.matches('image/.*')
+        && request.resource.size < 2 * 1024 * 1024; // 2MB
+    }
+
+    // User avatars — path: users/{userId}/avatar.jpg
+    match /users/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isCurrentUser(userId) && isValidAvatar();
+      allow delete: if isCurrentUser(userId);
+    }
+
+    // Commerce logos — path: commerces/logos/{commerceId}/logo.jpg
+    match /commerces/logos/{commerceId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isValidImage();
+      allow delete: if isAuthenticated();
+    }
+
+    // Commerce gallery — path: commerces/gallery/{commerceId}/{fileName}
+    match /commerces/gallery/{commerceId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isValidImage();
+      allow delete: if isAuthenticated();
+    }
+
+    // Promotion images — path: promotions/{promotionId}/{fileName}
+    match /promotions/{promotionId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isValidImage();
+      allow delete: if isAuthenticated();
+    }
+
+    // Reward images
+    match /rewards/{rewardId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isValidImage();
+      allow delete: if isAuthenticated();
+    }
+  }
+}

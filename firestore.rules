@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isCurrentUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role in ['admin', 'superAdmin'];
+    }
+
+    function isBusinessOwner() {
+      return isAuthenticated() && getUserData().role in ['businessOwner', 'admin', 'superAdmin'];
+    }
+
+    function ownsCommerce(commerceId) {
+      return isAuthenticated() && get(/databases/$(database)/documents/commerces/$(commerceId)).data.ownerId == request.auth.uid;
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isCurrentUser(userId) || isAdmin();
+      allow create: if isCurrentUser(userId);
+      allow update: if isCurrentUser(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Commerces
+    match /commerces/{commerceId} {
+      allow read: if true;
+      allow create: if isBusinessOwner();
+      allow update: if ownsCommerce(commerceId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Promotions
+    match /promotions/{promotionId} {
+      allow read: if true;
+      allow create: if isBusinessOwner();
+      allow update: if resource.data.commerceId == request.auth.uid || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Coupons
+    match /coupons/{couponId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAdmin();
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Reviews
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    // Rewards (public read, admin write)
+    match /rewards/{rewardId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() || isBusinessOwner();
+      allow delete: if isAdmin();
+    }
+
+    // Achievements definitions (public read)
+    match /achievements/{achievementId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Points transactions (own read)
+    match /points_transactions/{txId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // Reward redemptions (own read)
+    match /reward_redemptions/{redemptionId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // Analytics (write only via CF)
+    match /analytics/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+  }
+}
