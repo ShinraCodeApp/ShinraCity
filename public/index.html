@@ -179,6 +179,10 @@
       <label>Contraseña</label>
       <input type="password" id="login-password" placeholder="••••••••">
     </div>
+    <div style="display:flex;align-items:center;gap:8px;margin:10px 0 4px">
+      <input type="checkbox" id="remember-me" style="width:15px;height:15px;accent-color:var(--primary);cursor:pointer" checked>
+      <label for="remember-me" style="font-size:13px;color:var(--text-sec);cursor:pointer">Recordarme</label>
+    </div>
     <button class="btn-primary" id="login-btn" onclick="doLogin()">Iniciar sesión</button>
     <div id="login-error"></div>
   </div>
@@ -420,12 +424,17 @@ function initApp() {
 }
 
 async function doLogin() {
-  const email = document.getElementById('login-email').value;
-  const pass  = document.getElementById('login-password').value;
-  const btn   = document.getElementById('login-btn');
-  const err   = document.getElementById('login-error');
+  const email    = document.getElementById('login-email').value;
+  const pass     = document.getElementById('login-password').value;
+  const remember = document.getElementById('remember-me').checked;
+  const btn      = document.getElementById('login-btn');
+  const err      = document.getElementById('login-error');
   btn.disabled = true; btn.textContent = 'Iniciando...'; err.textContent = '';
   try {
+    const persistence = remember
+      ? firebase.auth.Auth.Persistence.LOCAL
+      : firebase.auth.Auth.Persistence.SESSION;
+    await auth.setPersistence(persistence);
     await auth.signInWithEmailAndPassword(email, pass);
     btn.disabled = false; btn.textContent = 'Iniciar sesión';
   } catch(e) {
