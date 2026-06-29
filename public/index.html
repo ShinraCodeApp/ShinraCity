@@ -427,6 +427,7 @@ async function doLogin() {
   btn.disabled = true; btn.textContent = 'Iniciando...'; err.textContent = '';
   try {
     await auth.signInWithEmailAndPassword(email, pass);
+    btn.disabled = false; btn.textContent = 'Iniciar sesión';
   } catch(e) {
     err.textContent = (e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found')
       ? 'Email o contraseña incorrectos' : 'Error: ' + e.message;
