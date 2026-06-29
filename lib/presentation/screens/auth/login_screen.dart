@@ -16,14 +16,14 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -142,14 +142,14 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         children: [
           ShinraTextField(
-            controller: _emailController,
-            label: 'Email',
-            prefixIcon: Icons.email_outlined,
-            keyboardType: TextInputType.emailAddress,
+            controller: _identifierController,
+            label: 'Email, usuario o negocio',
+            hint: 'juan@mail.com · Juan Pérez · Mi Tienda',
+            prefixIcon: Icons.person_outline,
+            keyboardType: TextInputType.text,
             validator: (value) {
-              if (value?.isEmpty ?? true) return 'Ingresá tu email';
-              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
-                return 'Email inválido';
+              if (value?.trim().isEmpty ?? true) {
+                return 'Ingresá tu email, nombre de usuario o negocio';
               }
               return null;
             },
@@ -266,7 +266,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _handleLogin() {
     if (!_formKey.currentState!.validate()) return;
     context.read<AuthBloc>().add(SignInWithEmailEvent(
-      email: _emailController.text.trim(),
+      email: _identifierController.text.trim(),
       password: _passwordController.text,
     ));
   }
@@ -280,13 +280,20 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleForgotPassword() {
-    if (_emailController.text.isEmpty) {
+    final id = _identifierController.text.trim();
+    if (id.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ingresá tu email primero')),
       );
       return;
     }
-    context.read<AuthBloc>().add(SendPasswordResetEvent(email: _emailController.text.trim()));
+    if (!id.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Para recuperar la contraseña ingresá tu email')),
+      );
+      return;
+    }
+    context.read<AuthBloc>().add(SendPasswordResetEvent(email: id));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Email de recuperación enviado'),

@@ -34,14 +34,55 @@ class FirebaseAuthDatasource {
     required String password,
   }) async {
     try {
+      final resolvedEmail = await _resolveIdentifier(email);
       final credential = await _auth.signInWithEmailAndPassword(
-        email: email,
+        email: resolvedEmail,
         password: password,
       );
       return _getUserFromFirestore(credential.user!.uid);
     } on FirebaseAuthException catch (e) {
       throw AuthFailure(message: _mapAuthError(e.code), code: e.code);
+    } on AuthFailure {
+      rethrow;
     }
+  }
+
+  /// Accepts email, display name, or business name — returns the Firebase Auth email.
+  Future<String> _resolveIdentifier(String input) async {
+    if (input.contains('@')) return input;
+
+    // Search by displayName in users collection
+    final byName = await _firestore
+        .collection(AppConstants.usersCollection)
+        .where('displayName', isEqualTo: input)
+        .limit(1)
+        .get();
+    if (byName.docs.isNotEmpty) {
+      final email = byName.docs.first.data()['email'] as String? ?? '';
+      if (email.isNotEmpty) return email;
+    }
+
+    // Search by business name in commerces collection → get owner email
+    final byBiz = await _firestore
+        .collection(AppConstants.commercesCollection)
+        .where('name', isEqualTo: input)
+        .limit(1)
+        .get();
+    if (byBiz.docs.isNotEmpty) {
+      final ownerId = byBiz.docs.first.data()['ownerId'] as String? ?? '';
+      if (ownerId.isNotEmpty) {
+        final ownerDoc = await _firestore
+            .collection(AppConstants.usersCollection)
+            .doc(ownerId)
+            .get();
+        final ownerEmail = ownerDoc.data()?['email'] as String? ?? '';
+        if (ownerEmail.isNotEmpty) return ownerEmail;
+      }
+    }
+
+    throw const AuthFailure(
+      message: 'No encontramos una cuenta con ese usuario o negocio',
+    );
   }
 
   Future<UserModel> signUpWithEmail({
