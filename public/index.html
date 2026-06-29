@@ -624,6 +624,7 @@ function renderBiz() {
       <td class="td-sec" style="font-size:10px">${(b.ownerId||'').slice(0,10)}…</td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="action-btn btn-accent" onclick="openEditBiz('${b.id}')">✏️ Editar</button>
           ${b.status==='pending' ? `<button class="action-btn btn-success" onclick="approveBiz('${b.id}')">✅ Aprobar</button>` : ''}
           ${b.status!=='suspended'
             ? `<button class="action-btn btn-danger" onclick="suspendBiz('${b.id}')">🚫</button>`
@@ -794,6 +795,73 @@ function showToast(msg, type='success') {
   setTimeout(() => t.className='', 3200);
 }
 
+// ════ EDIT BUSINESS MODAL ════
+const BIZ_CATEGORIES = ['restaurants','cafes','fastFood','bar','bakery','pharmacies','health','beauty','clothing','supermarket','hardware','jewelry','market','streetVendor','entrepreneur','artisans','services','automotive','education','technology','entertainment','sports','tourism','pets','other'];
+const BIZ_CAT_LABELS = {restaurants:'🍽️ Restaurante',cafes:'☕ Cafetería',fastFood:'🍔 Comida Rápida',bar:'🍺 Bar / Pub',bakery:'🥐 Panadería',pharmacies:'💊 Farmacia',health:'🏥 Salud',beauty:'💄 Belleza',clothing:'👕 Ropa',supermarket:'🛒 Supermercado',hardware:'🔩 Ferretería',jewelry:'💎 Joyería',market:'🏪 Feria / Mercado',streetVendor:'🛍️ Vendedor Ambulante',entrepreneur:'🚀 Emprendimiento',artisans:'🎨 Artesanos',services:'🔧 Servicios',automotive:'🚗 Automotriz',education:'📚 Educación',technology:'💻 Tecnología',entertainment:'🎭 Entretenimiento',sports:'⚽ Deportes',tourism:'✈️ Turismo',pets:'🐾 Mascotas',other:'📦 Otros'};
+
+function openEditBiz(id) {
+  const b = allBiz.find(b => b.id === id);
+  if (!b) return;
+  document.getElementById('ebiz-id').value = id;
+  document.getElementById('ebiz-name').value = b.name || '';
+  document.getElementById('ebiz-desc').value = b.description || '';
+  document.getElementById('ebiz-city').value = b.city || '';
+  document.getElementById('ebiz-address').value = b.address || '';
+  document.getElementById('ebiz-phone').value = b.phone || b.phoneNumber || '';
+  document.getElementById('ebiz-email').value = b.email || '';
+  document.getElementById('ebiz-website').value = b.website || '';
+  document.getElementById('ebiz-instagram').value = b.socialLinks?.instagram || b.instagram || '';
+  document.getElementById('ebiz-whatsapp').value = b.socialLinks?.whatsapp || b.whatsapp || '';
+  document.getElementById('ebiz-category').value = b.category || 'other';
+  document.getElementById('ebiz-plan').value = b.plan || 'free';
+  document.getElementById('ebiz-status').value = b.status || 'active';
+  document.getElementById('ebiz-verified').checked = !!b.isVerified;
+  document.getElementById('ebiz-featured').checked = !!b.isFeatured;
+  document.getElementById('ebiz-rating').value = b.rating || 0;
+  document.getElementById('ebiz-modal').classList.remove('hidden');
+}
+
+function closeEditBiz() {
+  document.getElementById('ebiz-modal').classList.add('hidden');
+}
+
+async function saveEditBiz() {
+  const id  = document.getElementById('ebiz-id').value;
+  const btn = document.getElementById('ebiz-save-btn');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const updates = {
+      name:        document.getElementById('ebiz-name').value.trim(),
+      description: document.getElementById('ebiz-desc').value.trim(),
+      city:        document.getElementById('ebiz-city').value.trim(),
+      address:     document.getElementById('ebiz-address').value.trim(),
+      phone:       document.getElementById('ebiz-phone').value.trim(),
+      email:       document.getElementById('ebiz-email').value.trim(),
+      website:     document.getElementById('ebiz-website').value.trim(),
+      'socialLinks.instagram': document.getElementById('ebiz-instagram').value.trim(),
+      'socialLinks.whatsapp':  document.getElementById('ebiz-whatsapp').value.trim(),
+      category:    document.getElementById('ebiz-category').value,
+      plan:        document.getElementById('ebiz-plan').value,
+      status:      document.getElementById('ebiz-status').value,
+      isVerified:  document.getElementById('ebiz-verified').checked,
+      isFeatured:  document.getElementById('ebiz-featured').checked,
+      rating:      parseFloat(document.getElementById('ebiz-rating').value) || 0,
+      updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    await db.collection('commerces').doc(id).update(updates);
+    const plain = {...updates, updatedAt: new Date()};
+    const a = allBiz.find(b=>b.id===id); if(a) Object.assign(a, plain);
+    const f = filteredBiz.find(b=>b.id===id); if(f) Object.assign(f, plain);
+    renderBiz();
+    closeEditBiz();
+    showToast('✅ Negocio actualizado', 'success');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Guardar cambios';
+  }
+}
+
 // ════ EDIT USER MODAL ════
 function openEditUser(uid) {
   const u = allUsers.find(u => u.id === uid);
@@ -849,6 +917,125 @@ async function saveEditUser() {
   }
 }
 </script>
+
+<!-- ── Edit Business Modal ── -->
+<div id="ebiz-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:18px;width:100%;max-width:620px;max-height:90vh;overflow-y:auto;padding:28px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
+      <h2 style="font-size:17px;font-weight:700">✏️ Editar negocio</h2>
+      <button onclick="closeEditBiz()" style="background:none;border:none;color:var(--text-sec);font-size:22px;cursor:pointer">×</button>
+    </div>
+    <input type="hidden" id="ebiz-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+      <div style="grid-column:1/-1">
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Nombre del negocio</label>
+        <input id="ebiz-name" type="text" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div style="grid-column:1/-1">
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Descripción</label>
+        <textarea id="ebiz-desc" rows="3" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none;resize:vertical"></textarea>
+      </div>
+
+      <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Categoría</label>
+        <select id="ebiz-category" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+          <option value="restaurants">🍽️ Restaurante</option>
+          <option value="cafes">☕ Cafetería</option>
+          <option value="fastFood">🍔 Comida Rápida</option>
+          <option value="bar">🍺 Bar / Pub</option>
+          <option value="bakery">🥐 Panadería</option>
+          <option value="pharmacies">💊 Farmacia</option>
+          <option value="health">🏥 Salud</option>
+          <option value="beauty">💄 Belleza</option>
+          <option value="clothing">👕 Ropa</option>
+          <option value="supermarket">🛒 Supermercado</option>
+          <option value="hardware">🔩 Ferretería</option>
+          <option value="jewelry">💎 Joyería</option>
+          <option value="market">🏪 Feria / Mercado</option>
+          <option value="streetVendor">🛍️ Vendedor Ambulante</option>
+          <option value="entrepreneur">🚀 Emprendimiento</option>
+          <option value="artisans">🎨 Artesanos</option>
+          <option value="services">🔧 Servicios</option>
+          <option value="automotive">🚗 Automotriz</option>
+          <option value="education">📚 Educación</option>
+          <option value="technology">💻 Tecnología</option>
+          <option value="entertainment">🎭 Entretenimiento</option>
+          <option value="sports">⚽ Deportes</option>
+          <option value="tourism">✈️ Turismo</option>
+          <option value="pets">🐾 Mascotas</option>
+          <option value="other">📦 Otros</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Ciudad</label>
+        <input id="ebiz-city" type="text" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div style="grid-column:1/-1">
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Dirección</label>
+        <input id="ebiz-address" type="text" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
+
+      <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Teléfono</label>
+        <input id="ebiz-phone" type="text" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Email del negocio</label>
+        <input id="ebiz-email" type="email" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Sitio web</label>
+        <input id="ebiz-website" type="text" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">WhatsApp</label>
+        <input id="ebiz-whatsapp" type="text" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Instagram (sin @)</label>
+        <input id="ebiz-instagram" type="text" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
+
+      <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Plan</label>
+        <select id="ebiz-plan" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+          <option value="free">Free</option>
+          <option value="basic">⭐ Básico</option>
+          <option value="premium">💎 Premium</option>
+          <option value="enterprise">🏢 Enterprise</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Estado</label>
+        <select id="ebiz-status" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+          <option value="active">✅ Activo</option>
+          <option value="pending">⏳ Pendiente</option>
+          <option value="suspended">🚫 Suspendido</option>
+          <option value="rejected">❌ Rechazado</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Rating (0-5)</label>
+        <input id="ebiz-rating" type="number" min="0" max="5" step="0.1" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;padding:6px 0">
+        <div style="display:flex;align-items:center;gap:10px">
+          <input id="ebiz-verified" type="checkbox" style="width:16px;height:16px;accent-color:var(--success)">
+          <label style="font-size:13px;color:var(--text)">✅ Verificado</label>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input id="ebiz-featured" type="checkbox" style="width:16px;height:16px;accent-color:var(--primary)">
+          <label style="font-size:13px;color:var(--text)">⭐ Destacado</label>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:22px">
+      <button onclick="closeEditBiz()" style="flex:1;padding:11px;background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;color:var(--text-sec);font-size:13px;cursor:pointer">Cancelar</button>
+      <button id="ebiz-save-btn" onclick="saveEditBiz()" style="flex:2;padding:11px;background:linear-gradient(135deg,#F0C020,#FF9500);border:none;border-radius:9px;color:#000;font-size:13px;font-weight:700;cursor:pointer">💾 Guardar cambios</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Edit User Modal ── -->
 <div id="edit-user-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px">
