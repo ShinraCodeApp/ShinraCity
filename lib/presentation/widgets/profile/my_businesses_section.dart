@@ -402,6 +402,7 @@ class _MyBusinessesSectionState extends State<MyBusinessesSection> {
     'market': '🏪',
     'streetVendor': '🛍️',
     'entrepreneur': '🚀',
+    'artisans': '🎨',
     'services': '🔧',
     'automotive': '🚗',
     'education': '📚',

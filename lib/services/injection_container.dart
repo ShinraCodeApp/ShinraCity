@@ -48,7 +48,7 @@ Future<void> configureDependencies() async {
   );
 
   sl.registerLazySingleton<ImageUploadService>(
-    () => ImageUploadService(storage: sl()),
+    () => ImageUploadService(),
   );
 
   // Datasources

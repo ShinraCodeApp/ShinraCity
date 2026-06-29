@@ -117,7 +117,7 @@ class ProfileScreen extends StatelessWidget {
                               color: AppColors.backgroundSurface,
                               child: Center(
                                 child: Text(
-                                  (user.displayName ?? user.email)[0].toUpperCase(),
+                                  ((user.displayName?.isNotEmpty == true ? user.displayName! : user.email.isNotEmpty ? user.email : 'U')[0]).toUpperCase(),
                                   style: AppTextStyles.displayMedium.copyWith(
                                     color: AppColors.primary,
                                   ),
@@ -216,7 +216,7 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 16),
           StepProgressIndicator(
             totalSteps: 100,
-            currentStep: (progress * 100).toInt().clamp(0, 100),
+            currentStep: (progress * 100).toInt().clamp(1, 100),
             size: 8,
             padding: 0,
             selectedColor: levelColor,

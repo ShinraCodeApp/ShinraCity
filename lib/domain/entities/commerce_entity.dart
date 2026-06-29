@@ -25,6 +25,7 @@ enum CommerceCategory {
   // Emprendedores
   streetVendor,
   entrepreneur,
+  artisans,
   // Servicios
   services,
   automotive,
@@ -146,6 +147,7 @@ class CommerceEntity extends Equatable {
       case CommerceCategory.market: return 'Feria / Mercado';
       case CommerceCategory.streetVendor: return 'Vendedor Ambulante';
       case CommerceCategory.entrepreneur: return 'Emprendimiento';
+      case CommerceCategory.artisans: return 'Artesanos';
       case CommerceCategory.services: return 'Servicios';
       case CommerceCategory.automotive: return 'Automotriz';
       case CommerceCategory.education: return 'Educación';

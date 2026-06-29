@@ -253,7 +253,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
       if (isCreating) {
         data.addAll({
           'ownerId': uid,
-          'status': isAdmin ? 'active' : 'pending',
+          'status': 'active',
           'plan': 'free',
           'subCategories': [],
           'tags': [],
@@ -818,6 +818,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
     (CommerceCategory.market, '🏪 Feria / Mercado'),
     (CommerceCategory.streetVendor, '🛍️ Vendedor Ambulante'),
     (CommerceCategory.entrepreneur, '🚀 Emprendimiento'),
+    (CommerceCategory.artisans, '🎨 Artesanos'),
     (CommerceCategory.services, '🔧 Servicios generales'),
     (CommerceCategory.automotive, '🚗 Automotriz'),
     (CommerceCategory.education, '📚 Educación'),

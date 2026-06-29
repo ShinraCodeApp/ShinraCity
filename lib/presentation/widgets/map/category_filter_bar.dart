@@ -32,6 +32,7 @@ class CategoryFilterBar extends StatelessWidget {
     // Emprendedores
     (CommerceCategory.streetVendor, '🛍️', 'Vendedores'),
     (CommerceCategory.entrepreneur, '🚀', 'Emprendimientos'),
+    (CommerceCategory.artisans, '🎨', 'Artesanos'),
     // Servicios
     (CommerceCategory.services, '🔧', 'Servicios'),
     (CommerceCategory.automotive, '🚗', 'Automotriz'),

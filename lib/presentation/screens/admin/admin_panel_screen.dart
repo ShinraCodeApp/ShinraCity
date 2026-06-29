@@ -1741,6 +1741,7 @@ class _CreateCommerceSheetState extends State<_CreateCommerceSheet> {
     (CommerceCategory.market, '🏪 Feria / Mercado'),
     (CommerceCategory.streetVendor, '🛍️ Vendedor Ambulante'),
     (CommerceCategory.entrepreneur, '🚀 Emprendimiento'),
+    (CommerceCategory.artisans, '🎨 Artesanos'),
     (CommerceCategory.services, '🔧 Servicios'),
     (CommerceCategory.automotive, '🚗 Automotriz'),
     (CommerceCategory.education, '📚 Educación'),

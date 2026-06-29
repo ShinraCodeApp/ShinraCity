@@ -231,7 +231,11 @@ class FirebaseAuthDatasource {
         .get();
 
     if (!doc.exists) throw const NotFoundFailure(message: 'Usuario no encontrado');
-    return UserModel.fromFirestore(doc);
+    final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
+    if ((data['email'] as String? ?? '').isEmpty) {
+      data['email'] = _auth.currentUser?.email ?? '';
+    }
+    return UserModel.fromMap(data, uid);
   }
 
   Future<void> _createUserDocument(UserModel user) async {

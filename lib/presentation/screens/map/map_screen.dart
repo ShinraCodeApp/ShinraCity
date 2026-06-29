@@ -347,6 +347,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       case CommerceCategory.market:        return const Color(0xFF66BB6A);
       case CommerceCategory.streetVendor:  return const Color(0xFFFF9800);
       case CommerceCategory.entrepreneur:  return const Color(0xFF00E5FF);
+      case CommerceCategory.artisans:      return const Color(0xFFD4A853);
       case CommerceCategory.services:      return const Color(0xFF607D8B);
       case CommerceCategory.automotive:    return const Color(0xFFFF5722);
       case CommerceCategory.education:     return const Color(0xFF3F51B5);
@@ -478,6 +479,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       case CommerceCategory.market:        return Icons.storefront;
       case CommerceCategory.streetVendor:  return Icons.shopping_bag;
       case CommerceCategory.entrepreneur:  return Icons.rocket_launch;
+      case CommerceCategory.artisans:      return Icons.palette;
       case CommerceCategory.services:      return Icons.build;
       case CommerceCategory.automotive:    return Icons.directions_car;
       case CommerceCategory.education:     return Icons.school;
@@ -555,6 +557,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
     CommerceCategory.market: 'Feria / Mercado',
     CommerceCategory.streetVendor: 'Vendedores Ambulantes',
     CommerceCategory.entrepreneur: 'Emprendimientos',
+    CommerceCategory.artisans: 'Artesanos',
     CommerceCategory.services: 'Servicios',
     CommerceCategory.automotive: 'Automotriz',
     CommerceCategory.education: 'Educacion',

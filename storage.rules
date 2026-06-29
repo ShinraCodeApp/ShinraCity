@@ -27,15 +27,8 @@ service firebase.storage {
       allow delete: if isCurrentUser(userId);
     }
 
-    // Commerce logos — path: commerces/logos/{commerceId}/logo.jpg
-    match /commerces/logos/{commerceId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if isAuthenticated() && isValidImage();
-      allow delete: if isAuthenticated();
-    }
-
-    // Commerce gallery — path: commerces/gallery/{commerceId}/{fileName}
-    match /commerces/gallery/{commerceId}/{allPaths=**} {
+    // Commerce images — path: commerces/{commerceId}/logo.jpg or commerces/{commerceId}/gallery/...
+    match /commerces/{commerceId}/{allPaths=**} {
       allow read: if true;
       allow write: if isAuthenticated() && isValidImage();
       allow delete: if isAuthenticated();

@@ -63,6 +63,12 @@ android {
             signingConfig signingConfigs.debug // Replace with release signing config
         }
     }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "ShinraCity-${variant.versionName}.apk"
+        }
+    }
 }
 
 flutter {
