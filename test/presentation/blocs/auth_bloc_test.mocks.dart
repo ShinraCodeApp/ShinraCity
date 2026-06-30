@@ -43,7 +43,7 @@ class MockAuthRepository extends Mock implements AuthRepository {
     required String? email,
     required String? password,
     required String? displayName,
-    String accountType = 'user',
+    String? accountType,
   }) =>
       super.noSuchMethod(
         Invocation.method(#signUpWithEmail, [], {

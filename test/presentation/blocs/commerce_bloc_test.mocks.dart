@@ -10,15 +10,17 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
   Future<Either<Failure, CommerceEntity>> getCommerce(String? id) =>
       super.noSuchMethod(
         Invocation.method(#getCommerce, [id]),
-        returnValue: Future.value(const Left(ServerFailure(message: 'error'))),
-      );
+        returnValue: Future<Either<Failure, CommerceEntity>>.value(const Left(ServerFailure(message: 'error'))),
+        returnValueForMissingStub: Future<Either<Failure, CommerceEntity>>.value(const Left(ServerFailure(message: 'error'))),
+      ) as Future<Either<Failure, CommerceEntity>>;
 
   @override
   Future<Either<Failure, CommerceEntity>> getCommerceByOwnerId(String? ownerId) =>
       super.noSuchMethod(
         Invocation.method(#getCommerceByOwnerId, [ownerId]),
-        returnValue: Future.value(const Left(ServerFailure(message: 'error'))),
-      );
+        returnValue: Future<Either<Failure, CommerceEntity>>.value(const Left(ServerFailure(message: 'error'))),
+        returnValueForMissingStub: Future<Either<Failure, CommerceEntity>>.value(const Left(ServerFailure(message: 'error'))),
+      ) as Future<Either<Failure, CommerceEntity>>;
 
   @override
   Future<Either<Failure, bool>> isUserFavorite({
@@ -26,13 +28,10 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     required String? commerceId,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #isUserFavorite,
-          [],
-          {#userId: userId, #commerceId: commerceId},
-        ),
-        returnValue: Future.value(const Right(false)),
-      );
+        Invocation.method(#isUserFavorite, [], {#userId: userId, #commerceId: commerceId}),
+        returnValue: Future<Either<Failure, bool>>.value(const Right(false)),
+        returnValueForMissingStub: Future<Either<Failure, bool>>.value(const Right(false)),
+      ) as Future<Either<Failure, bool>>;
 
   @override
   Future<Either<Failure, bool>> isUserFollowing({
@@ -40,13 +39,10 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     required String? commerceId,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #isUserFollowing,
-          [],
-          {#userId: userId, #commerceId: commerceId},
-        ),
-        returnValue: Future.value(const Right(false)),
-      );
+        Invocation.method(#isUserFollowing, [], {#userId: userId, #commerceId: commerceId}),
+        returnValue: Future<Either<Failure, bool>>.value(const Right(false)),
+        returnValueForMissingStub: Future<Either<Failure, bool>>.value(const Right(false)),
+      ) as Future<Either<Failure, bool>>;
 
   @override
   Future<Either<Failure, void>> toggleFavorite({
@@ -54,13 +50,10 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     required String? commerceId,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #toggleFavorite,
-          [],
-          {#userId: userId, #commerceId: commerceId},
-        ),
-        returnValue: Future.value(const Right(null)),
-      );
+        Invocation.method(#toggleFavorite, [], {#userId: userId, #commerceId: commerceId}),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
+        returnValueForMissingStub: Future<Either<Failure, void>>.value(const Right(null)),
+      ) as Future<Either<Failure, void>>;
 
   @override
   Future<Either<Failure, void>> toggleFollow({
@@ -68,48 +61,50 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     required String? commerceId,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #toggleFollow,
-          [],
-          {#userId: userId, #commerceId: commerceId},
-        ),
-        returnValue: Future.value(const Right(null)),
-      );
+        Invocation.method(#toggleFollow, [], {#userId: userId, #commerceId: commerceId}),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
+        returnValueForMissingStub: Future<Either<Failure, void>>.value(const Right(null)),
+      ) as Future<Either<Failure, void>>;
 
   @override
   Future<Either<Failure, CommerceEntity>> updateCommerce(CommerceEntity? commerce) =>
       super.noSuchMethod(
         Invocation.method(#updateCommerce, [commerce]),
-        returnValue: Future.value(const Left(ServerFailure(message: 'error'))),
-      );
+        returnValue: Future<Either<Failure, CommerceEntity>>.value(const Left(ServerFailure(message: 'error'))),
+        returnValueForMissingStub: Future<Either<Failure, CommerceEntity>>.value(const Left(ServerFailure(message: 'error'))),
+      ) as Future<Either<Failure, CommerceEntity>>;
 
   @override
   Future<Either<Failure, List<CommerceEntity>>> getUserFavorites(String? userId) =>
       super.noSuchMethod(
         Invocation.method(#getUserFavorites, [userId]),
-        returnValue: Future.value(const Right([])),
-      );
+        returnValue: Future<Either<Failure, List<CommerceEntity>>>.value(const Right([])),
+        returnValueForMissingStub: Future<Either<Failure, List<CommerceEntity>>>.value(const Right([])),
+      ) as Future<Either<Failure, List<CommerceEntity>>>;
 
   @override
   Future<Either<Failure, List<CommerceEntity>>> getUserFollowing(String? userId) =>
       super.noSuchMethod(
         Invocation.method(#getUserFollowing, [userId]),
-        returnValue: Future.value(const Right([])),
-      );
+        returnValue: Future<Either<Failure, List<CommerceEntity>>>.value(const Right([])),
+        returnValueForMissingStub: Future<Either<Failure, List<CommerceEntity>>>.value(const Right([])),
+      ) as Future<Either<Failure, List<CommerceEntity>>>;
 
   @override
   Future<Either<Failure, CommerceEntity>> createCommerce(CommerceEntity? commerce) =>
       super.noSuchMethod(
         Invocation.method(#createCommerce, [commerce]),
-        returnValue: Future.value(Left(ServerFailure(message: 'error'))),
-      );
+        returnValue: Future<Either<Failure, CommerceEntity>>.value(const Left(ServerFailure(message: 'error'))),
+        returnValueForMissingStub: Future<Either<Failure, CommerceEntity>>.value(const Left(ServerFailure(message: 'error'))),
+      ) as Future<Either<Failure, CommerceEntity>>;
 
   @override
   Future<Either<Failure, void>> deleteCommerce(String? id) =>
       super.noSuchMethod(
         Invocation.method(#deleteCommerce, [id]),
-        returnValue: Future.value(const Right(null)),
-      );
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
+        returnValueForMissingStub: Future<Either<Failure, void>>.value(const Right(null)),
+      ) as Future<Either<Failure, void>>;
 
   @override
   Future<Either<Failure, List<CommerceEntity>>> getNearbyCommerces({
@@ -124,17 +119,13 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
   }) =>
       super.noSuchMethod(
         Invocation.method(#getNearbyCommerces, [], {
-          #location: location,
-          #radiusKm: radiusKm,
-          #category: category,
-          #searchQuery: searchQuery,
-          #onlyOpen: onlyOpen,
-          #onlyWithPromotions: onlyWithPromotions,
-          #minPlan: minPlan,
-          #limit: limit,
+          #location: location, #radiusKm: radiusKm, #category: category,
+          #searchQuery: searchQuery, #onlyOpen: onlyOpen,
+          #onlyWithPromotions: onlyWithPromotions, #minPlan: minPlan, #limit: limit,
         }),
-        returnValue: Future.value(const Right([])),
-      );
+        returnValue: Future<Either<Failure, List<CommerceEntity>>>.value(const Right([])),
+        returnValueForMissingStub: Future<Either<Failure, List<CommerceEntity>>>.value(const Right([])),
+      ) as Future<Either<Failure, List<CommerceEntity>>>;
 
   @override
   Future<Either<Failure, List<CommerceEntity>>> searchCommerces({
@@ -146,14 +137,12 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
   }) =>
       super.noSuchMethod(
         Invocation.method(#searchCommerces, [], {
-          #query: query,
-          #category: category,
-          #location: location,
-          #radiusKm: radiusKm,
-          #limit: limit,
+          #query: query, #category: category, #location: location,
+          #radiusKm: radiusKm, #limit: limit,
         }),
-        returnValue: Future.value(const Right([])),
-      );
+        returnValue: Future<Either<Failure, List<CommerceEntity>>>.value(const Right([])),
+        returnValueForMissingStub: Future<Either<Failure, List<CommerceEntity>>>.value(const Right([])),
+      ) as Future<Either<Failure, List<CommerceEntity>>>;
 
   @override
   Future<Either<Failure, List<CommerceEntity>>> getFeaturedCommerces({
@@ -161,12 +150,10 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     int limit = 10,
   }) =>
       super.noSuchMethod(
-        Invocation.method(#getFeaturedCommerces, [], {
-          #location: location,
-          #limit: limit,
-        }),
-        returnValue: Future.value(const Right([])),
-      );
+        Invocation.method(#getFeaturedCommerces, [], {#location: location, #limit: limit}),
+        returnValue: Future<Either<Failure, List<CommerceEntity>>>.value(const Right([])),
+        returnValueForMissingStub: Future<Either<Failure, List<CommerceEntity>>>.value(const Right([])),
+      ) as Future<Either<Failure, List<CommerceEntity>>>;
 
   @override
   Future<Either<Failure, String>> uploadLogo({
@@ -174,13 +161,10 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     required String? filePath,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #uploadLogo,
-          [],
-          {#commerceId: commerceId, #filePath: filePath},
-        ),
-        returnValue: Future.value(const Left(ServerFailure(message: 'error'))),
-      );
+        Invocation.method(#uploadLogo, [], {#commerceId: commerceId, #filePath: filePath}),
+        returnValue: Future<Either<Failure, String>>.value(const Left(ServerFailure(message: 'error'))),
+        returnValueForMissingStub: Future<Either<Failure, String>>.value(const Left(ServerFailure(message: 'error'))),
+      ) as Future<Either<Failure, String>>;
 
   @override
   Future<Either<Failure, String>> uploadGalleryImage({
@@ -188,13 +172,10 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     required String? filePath,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #uploadGalleryImage,
-          [],
-          {#commerceId: commerceId, #filePath: filePath},
-        ),
-        returnValue: Future.value(const Left(ServerFailure(message: 'error'))),
-      );
+        Invocation.method(#uploadGalleryImage, [], {#commerceId: commerceId, #filePath: filePath}),
+        returnValue: Future<Either<Failure, String>>.value(const Left(ServerFailure(message: 'error'))),
+        returnValueForMissingStub: Future<Either<Failure, String>>.value(const Left(ServerFailure(message: 'error'))),
+      ) as Future<Either<Failure, String>>;
 
   @override
   Future<Either<Failure, void>> deleteGalleryImage({
@@ -202,19 +183,17 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     required String? imageUrl,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #deleteGalleryImage,
-          [],
-          {#commerceId: commerceId, #imageUrl: imageUrl},
-        ),
-        returnValue: Future.value(const Right(null)),
-      );
+        Invocation.method(#deleteGalleryImage, [], {#commerceId: commerceId, #imageUrl: imageUrl}),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
+        returnValueForMissingStub: Future<Either<Failure, void>>.value(const Right(null)),
+      ) as Future<Either<Failure, void>>;
 
   @override
   Stream<CommerceEntity> watchCommerce(String? id) => super.noSuchMethod(
         Invocation.method(#watchCommerce, [id]),
-        returnValue: const Stream.empty(),
-      );
+        returnValue: const Stream<CommerceEntity>.empty(),
+        returnValueForMissingStub: const Stream<CommerceEntity>.empty(),
+      ) as Stream<CommerceEntity>;
 
   @override
   Stream<List<CommerceEntity>> watchNearbyCommerces({
@@ -222,12 +201,10 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     required double? radiusKm,
   }) =>
       super.noSuchMethod(
-        Invocation.method(#watchNearbyCommerces, [], {
-          #location: location,
-          #radiusKm: radiusKm,
-        }),
-        returnValue: const Stream.empty(),
-      );
+        Invocation.method(#watchNearbyCommerces, [], {#location: location, #radiusKm: radiusKm}),
+        returnValue: const Stream<List<CommerceEntity>>.empty(),
+        returnValueForMissingStub: const Stream<List<CommerceEntity>>.empty(),
+      ) as Stream<List<CommerceEntity>>;
 
   @override
   Future<Either<Failure, void>> updateBusinessHours({
@@ -235,13 +212,10 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     required Map<String, BusinessHours>? hours,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #updateBusinessHours,
-          [],
-          {#commerceId: commerceId, #hours: hours},
-        ),
-        returnValue: Future.value(const Right(null)),
-      );
+        Invocation.method(#updateBusinessHours, [], {#commerceId: commerceId, #hours: hours}),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
+        returnValueForMissingStub: Future<Either<Failure, void>>.value(const Right(null)),
+      ) as Future<Either<Failure, void>>;
 
   @override
   Future<Either<Failure, void>> addEmployee({
@@ -249,13 +223,10 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     required String? employeeId,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #addEmployee,
-          [],
-          {#commerceId: commerceId, #employeeId: employeeId},
-        ),
-        returnValue: Future.value(const Right(null)),
-      );
+        Invocation.method(#addEmployee, [], {#commerceId: commerceId, #employeeId: employeeId}),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
+        returnValueForMissingStub: Future<Either<Failure, void>>.value(const Right(null)),
+      ) as Future<Either<Failure, void>>;
 
   @override
   Future<Either<Failure, void>> removeEmployee({
@@ -263,13 +234,10 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     required String? employeeId,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #removeEmployee,
-          [],
-          {#commerceId: commerceId, #employeeId: employeeId},
-        ),
-        returnValue: Future.value(const Right(null)),
-      );
+        Invocation.method(#removeEmployee, [], {#commerceId: commerceId, #employeeId: employeeId}),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
+        returnValueForMissingStub: Future<Either<Failure, void>>.value(const Right(null)),
+      ) as Future<Either<Failure, void>>;
 
   @override
   Future<Either<Failure, Map<String, dynamic>>> getCommerceAnalytics({
@@ -277,26 +245,20 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     String period = 'week',
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #getCommerceAnalytics,
-          [],
-          {#commerceId: commerceId, #period: period},
-        ),
-        returnValue: Future.value(const Right(<String, dynamic>{})),
-      );
+        Invocation.method(#getCommerceAnalytics, [], {#commerceId: commerceId, #period: period}),
+        returnValue: Future<Either<Failure, Map<String, dynamic>>>.value(const Right(<String, dynamic>{})),
+        returnValueForMissingStub: Future<Either<Failure, Map<String, dynamic>>>.value(const Right(<String, dynamic>{})),
+      ) as Future<Either<Failure, Map<String, dynamic>>>;
 
   @override
   Future<Either<Failure, List<String>>> getAiSuggestions({
     required String? commerceId,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #getAiSuggestions,
-          [],
-          {#commerceId: commerceId},
-        ),
-        returnValue: Future.value(const Right(<String>[])),
-      );
+        Invocation.method(#getAiSuggestions, [], {#commerceId: commerceId}),
+        returnValue: Future<Either<Failure, List<String>>>.value(const Right(<String>[])),
+        returnValueForMissingStub: Future<Either<Failure, List<String>>>.value(const Right(<String>[])),
+      ) as Future<Either<Failure, List<String>>>;
 
   @override
   Future<Either<Failure, List<int>>> getDailyCouponCounts({
@@ -304,13 +266,10 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     int days = 30,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #getDailyCouponCounts,
-          [],
-          {#commerceId: commerceId, #days: days},
-        ),
-        returnValue: Future.value(Right(List<int>.filled(30, 0))),
-      );
+        Invocation.method(#getDailyCouponCounts, [], {#commerceId: commerceId, #days: days}),
+        returnValue: Future<Either<Failure, List<int>>>.value(Right(List<int>.filled(30, 0))),
+        returnValueForMissingStub: Future<Either<Failure, List<int>>>.value(Right(List<int>.filled(30, 0))),
+      ) as Future<Either<Failure, List<int>>>;
 
   @override
   Future<Either<Failure, List<Map<String, dynamic>>>> getRecentCouponActivity({
@@ -318,12 +277,8 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
     int limit = 5,
   }) =>
       super.noSuchMethod(
-        Invocation.method(
-          #getRecentCouponActivity,
-          [],
-          {#commerceId: commerceId, #limit: limit},
-        ),
-        returnValue:
-            Future.value(const Right(<Map<String, dynamic>>[])),
-      );
+        Invocation.method(#getRecentCouponActivity, [], {#commerceId: commerceId, #limit: limit}),
+        returnValue: Future<Either<Failure, List<Map<String, dynamic>>>>.value(const Right(<Map<String, dynamic>>[])),
+        returnValueForMissingStub: Future<Either<Failure, List<Map<String, dynamic>>>>.value(const Right(<Map<String, dynamic>>[])),
+      ) as Future<Either<Failure, List<Map<String, dynamic>>>>;
 }

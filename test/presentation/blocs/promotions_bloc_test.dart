@@ -1,4 +1,4 @@
-import 'package:bloc_test/bloc_test.dart';
+﻿import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -21,21 +21,21 @@ class MockPromotionRepository extends Mock implements PromotionRepository {
           #status: status,
           #limit: limit,
         }),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<PromotionEntity>>>.value(const Right([])),
       );
 
   @override
   Future<Either<Failure, PromotionEntity>> createPromotion(PromotionEntity? promotion) =>
       super.noSuchMethod(
         Invocation.method(#createPromotion, [promotion]),
-        returnValue: Future.value(const Left(ServerFailure(message: 'error'))),
+        returnValue: Future<Either<Failure, PromotionEntity>>.value(const Left(ServerFailure(message: 'error'))),
       );
 
   @override
   Future<Either<Failure, PromotionEntity>> updatePromotion(PromotionEntity? promotion) =>
       super.noSuchMethod(
         Invocation.method(#updatePromotion, [promotion]),
-        returnValue: Future.value(const Left(ServerFailure(message: 'error'))),
+        returnValue: Future<Either<Failure, PromotionEntity>>.value(const Left(ServerFailure(message: 'error'))),
       );
 
   @override
@@ -49,14 +49,14 @@ class MockPromotionRepository extends Mock implements PromotionRepository {
           [],
           {#promotionId: promotionId, #status: status},
         ),
-        returnValue: Future.value(const Right(null)),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
       );
 
   @override
   Future<Either<Failure, void>> deletePromotion(String? id) =>
       super.noSuchMethod(
         Invocation.method(#deletePromotion, [id]),
-        returnValue: Future.value(const Right(null)),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
       );
 
   @override
@@ -75,14 +75,14 @@ class MockPromotionRepository extends Mock implements PromotionRepository {
           #onlyActive: onlyActive,
           #limit: limit,
         }),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<PromotionEntity>>>.value(const Right([])),
       );
 
   @override
   Future<Either<Failure, PromotionEntity>> getPromotion(String? id) =>
       super.noSuchMethod(
         Invocation.method(#getPromotion, [id]),
-        returnValue: Future.value(const Left(ServerFailure(message: 'error'))),
+        returnValue: Future<Either<Failure, PromotionEntity>>.value(const Left(ServerFailure(message: 'error'))),
       );
 
   @override
@@ -95,7 +95,7 @@ class MockPromotionRepository extends Mock implements PromotionRepository {
           #location: location,
           #limit: limit,
         }),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<PromotionEntity>>>.value(const Right([])),
       );
 
   @override
@@ -110,7 +110,7 @@ class MockPromotionRepository extends Mock implements PromotionRepository {
           #location: location,
           #limit: limit,
         }),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<PromotionEntity>>>.value(const Right([])),
       );
 
   @override
@@ -123,15 +123,15 @@ class MockPromotionRepository extends Mock implements PromotionRepository {
           #promotionId: promotionId,
           #filePath: filePath,
         }),
-        returnValue: Future.value(const Left(ServerFailure(message: 'error'))),
+        returnValue: Future<Either<Failure, String>>.value(const Left(ServerFailure(message: 'error'))),
       );
 
   @override
   Stream<List<PromotionEntity>> watchCommercePromotions(String? commerceId) =>
       super.noSuchMethod(
         Invocation.method(#watchCommercePromotions, [commerceId]),
-        returnValue: const Stream.empty(),
-      );
+        returnValue: const Stream<List<PromotionEntity>>.empty(),
+      ) as Stream<List<PromotionEntity>>;
 
   @override
   Stream<List<PromotionEntity>> watchNearbyPromotions({
@@ -143,14 +143,14 @@ class MockPromotionRepository extends Mock implements PromotionRepository {
           #location: location,
           #radiusKm: radiusKm,
         }),
-        returnValue: const Stream.empty(),
-      );
+        returnValue: const Stream<List<PromotionEntity>>.empty(),
+      ) as Stream<List<PromotionEntity>>;
 
   @override
   Future<Either<Failure, void>> incrementViewCount(String? promotionId) =>
       super.noSuchMethod(
         Invocation.method(#incrementViewCount, [promotionId]),
-        returnValue: Future.value(const Right(null)),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
       );
 }
 

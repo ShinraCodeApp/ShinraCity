@@ -81,7 +81,7 @@ class CommerceDashboardLoaded extends CommerceState {
   });
 
   @override
-  List<Object?> get props => [commerce, stats];
+  List<Object?> get props => [commerce, stats, commerce.logoUrl];
 }
 
 class CommerceDetailLoaded extends CommerceState {

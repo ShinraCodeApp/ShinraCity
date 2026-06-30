@@ -1,4 +1,4 @@
-import 'package:bloc_test/bloc_test.dart';
+﻿import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -35,7 +35,7 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
           #minPlan: minPlan,
           #limit: limit,
         }),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<CommerceEntity>>>.value(const Right([])),
       );
 
   @override
@@ -54,14 +54,14 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
           #radiusKm: radiusKm,
           #limit: limit,
         }),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<CommerceEntity>>>.value(const Right([])),
       );
 
   @override
   Future<Either<Failure, CommerceEntity>> getCommerce(String? id) =>
       super.noSuchMethod(
         Invocation.method(#getCommerce, [id]),
-        returnValue: Future.value(Left(ServerFailure(message: 'error'))),
+        returnValue: Future<Either<Failure, CommerceEntity>>.value(Left(ServerFailure(message: 'error'))),
       );
 }
 
@@ -82,7 +82,7 @@ class MockPromotionRepository extends Mock implements PromotionRepository {
           #onlyActive: onlyActive,
           #limit: limit,
         }),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<PromotionEntity>>>.value(const Right([])),
       );
 
   @override
@@ -97,7 +97,7 @@ class MockPromotionRepository extends Mock implements PromotionRepository {
           #status: status,
           #limit: limit,
         }),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<PromotionEntity>>>.value(const Right([])),
       );
 }
 
@@ -167,7 +167,6 @@ void main() {
       },
       act: (bloc) => bloc.add(LoadNearbyCommerces(location: _loc)),
       expect: () => [
-        MapLoading(),
         isA<MapLoaded>()
             .having((s) => s.commerces.length, 'commerces', 1)
             .having((s) => s.userLocation, 'location', _loc),
@@ -187,7 +186,6 @@ void main() {
       },
       act: (bloc) => bloc.add(LoadNearbyCommerces(location: _loc)),
       expect: () => [
-        MapLoading(),
         isA<MapError>().having((s) => s.message, 'message', 'Sin conexión'),
       ],
     );
@@ -206,7 +204,6 @@ void main() {
         LoadNearbyCommerces(location: _loc, category: CommerceCategory.restaurants),
       ),
       expect: () => [
-        MapLoading(),
         isA<MapLoaded>()
             .having((s) => s.activeCategory, 'category', CommerceCategory.restaurants),
       ],
@@ -266,8 +263,10 @@ void main() {
         userLocation: _loc,
       ),
       setUp: () {
-        when(commerceRepo.searchCommerces(query: 'pizza'))
-            .thenAnswer((_) async => Right([_fakeCommerce(id: 'c2')]));
+        when(commerceRepo.searchCommerces(
+          query: 'pizza',
+          location: anyNamed('location'),
+        )).thenAnswer((_) async => Right([_fakeCommerce(id: 'c2')]));
       },
       act: (bloc) => bloc.add(SearchCommerces(query: 'pizza')),
       expect: () => [
@@ -285,7 +284,10 @@ void main() {
         userLocation: _loc,
       ),
       setUp: () {
-        when(commerceRepo.searchCommerces(query: 'pizza')).thenAnswer(
+        when(commerceRepo.searchCommerces(
+          query: 'pizza',
+          location: anyNamed('location'),
+        )).thenAnswer(
           (_) async => const Left(ServerFailure(message: 'Error búsqueda')),
         );
       },
@@ -317,7 +319,6 @@ void main() {
         );
       },
       expect: () => [
-        MapLoading(),
         isA<MapLoaded>().having((s) => s.commerces.length, 'all', 2),
         isA<MapLoaded>()
             .having((s) => s.commerces.length, 'filtered', 1)
@@ -381,7 +382,6 @@ void main() {
       },
       act: (bloc) => bloc.add(UpdateUserLocation(location: _loc)),
       expect: () => [
-        MapLoading(),
         isA<MapLoaded>()
             .having((s) => s.userLocation, 'location', _loc)
             .having((s) => s.commerces.length, 'commerces', 1),

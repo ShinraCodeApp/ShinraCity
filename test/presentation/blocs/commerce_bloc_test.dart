@@ -140,7 +140,7 @@ void main() {
         aiSuggestions: const [],
       ),
       act: (bloc) {
-        final updated = _fakeCommerce();
+        final updated = _fakeCommerce().copyWith(name: 'Café Actualizado');
         bloc.add(UpdateCommerceEvent(updated));
       },
       setUp: () {

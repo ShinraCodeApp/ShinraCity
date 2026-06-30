@@ -1,4 +1,4 @@
-import 'package:bloc_test/bloc_test.dart';
+﻿import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -24,7 +24,7 @@ class MockCouponRepository extends Mock implements CouponRepository {
           #limit: limit,
           #lastCouponId: lastCouponId,
         }),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<CouponEntity>>>.value(const Right([])),
       );
 
   @override
@@ -39,7 +39,7 @@ class MockCouponRepository extends Mock implements CouponRepository {
           #promotionId: promotionId,
           #deviceId: deviceId,
         }),
-        returnValue: Future.value(
+        returnValue: Future<Either<Failure, CouponEntity>>.value(
           Left(ServerFailure(message: 'error')),
         ),
       );
@@ -58,7 +58,7 @@ class MockCouponRepository extends Mock implements CouponRepository {
           #commerceId: commerceId,
           #branchId: branchId,
         }),
-        returnValue: Future.value(
+        returnValue: Future<Either<Failure, CouponEntity>>.value(
           Left(ServerFailure(message: 'error')),
         ),
       );
@@ -75,7 +75,7 @@ class MockCouponRepository extends Mock implements CouponRepository {
           #userId: userId,
           #reason: reason,
         }),
-        returnValue: Future.value(const Right(null)),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
       );
 }
 

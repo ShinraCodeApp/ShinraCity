@@ -1,4 +1,4 @@
-import 'package:bloc_test/bloc_test.dart';
+﻿import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -13,28 +13,28 @@ class MockPointsRepository extends Mock implements PointsRepository {
   Future<Either<Failure, int>> getUserPoints(String? userId) =>
       super.noSuchMethod(
         Invocation.method(#getUserPoints, [userId]),
-        returnValue: Future.value(const Right(0)),
+        returnValue: Future<Either<Failure, int>>.value(const Right(0)),
       );
 
   @override
   Future<Either<Failure, UserLevel>> checkAndUpdateUserLevel(String? userId) =>
       super.noSuchMethod(
         Invocation.method(#checkAndUpdateUserLevel, [userId]),
-        returnValue: Future.value(const Right(UserLevel.explorer)),
+        returnValue: Future<Either<Failure, UserLevel>>.value(const Right(UserLevel.explorer)),
       );
 
   @override
   Future<Either<Failure, List<UserAchievementEntity>>> getUserAchievements(String? userId) =>
       super.noSuchMethod(
         Invocation.method(#getUserAchievements, [userId]),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<UserAchievementEntity>>>.value(const Right([])),
       );
 
   @override
   Future<Either<Failure, List<AchievementEntity>>> getAvailableAchievements() =>
       super.noSuchMethod(
         Invocation.method(#getAvailableAchievements, []),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<AchievementEntity>>>.value(const Right([])),
       );
 
   @override
@@ -44,7 +44,7 @@ class MockPointsRepository extends Mock implements PointsRepository {
   }) =>
       super.noSuchMethod(
         Invocation.method(#getLeaderboard, [], {#city: city, #limit: limit}),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<Map<String, dynamic>>>>.value(const Right([])),
       );
 
   @override
@@ -59,7 +59,7 @@ class MockPointsRepository extends Mock implements PointsRepository {
           #rewardId: rewardId,
           #commerceId: commerceId,
         }),
-        returnValue: Future.value(const Right(null)),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
       );
 
   @override
@@ -74,7 +74,7 @@ class MockPointsRepository extends Mock implements PointsRepository {
           #limit: limit,
           #lastTransactionId: lastTransactionId,
         }),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<Map<String, dynamic>>>>.value(const Right([])),
       );
 
   @override
@@ -87,7 +87,7 @@ class MockPointsRepository extends Mock implements PointsRepository {
           #userId: userId,
           #achievementId: achievementId,
         }),
-        returnValue: Future.value(const Right(null)),
+        returnValue: Future<Either<Failure, UserAchievementEntity?>>.value(const Right(null)),
       );
 
   @override
@@ -100,7 +100,7 @@ class MockPointsRepository extends Mock implements PointsRepository {
           #commerceId: commerceId,
           #onlyActive: onlyActive,
         }),
-        returnValue: Future.value(const Right([])),
+        returnValue: Future<Either<Failure, List<RewardEntity>>>.value(const Right([])),
       );
 
   @override
@@ -109,14 +109,14 @@ class MockPointsRepository extends Mock implements PointsRepository {
   }) =>
       super.noSuchMethod(
         Invocation.method(#getAllActiveRewards, [], {#limit: limit}),
-        returnValue: Future.value(const Right(<RewardEntity>[])),
+        returnValue: Future<Either<Failure, List<RewardEntity>>>.value(const Right(<RewardEntity>[])),
       );
 
   @override
   Future<Either<Failure, RewardEntity>> createReward(RewardEntity? reward) =>
       super.noSuchMethod(
         Invocation.method(#createReward, [reward]),
-        returnValue: Future.value(const Left(ServerFailure(message: 'error'))),
+        returnValue: Future<Either<Failure, RewardEntity>>.value(const Left(ServerFailure(message: 'error'))),
       );
 
   @override
@@ -137,7 +137,7 @@ class MockPointsRepository extends Mock implements PointsRepository {
           #promotionId: promotionId,
           #couponId: couponId,
         }),
-        returnValue: Future.value(const Right(null)),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
       );
 
   @override
@@ -154,7 +154,7 @@ class MockPointsRepository extends Mock implements PointsRepository {
           #reason: reason,
           #rewardId: rewardId,
         }),
-        returnValue: Future.value(const Right(null)),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
       );
 }
 
