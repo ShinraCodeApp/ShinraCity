@@ -100,7 +100,6 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<CouponRepository>(
     () => CouponRepositoryImpl(
       datasource: sl(),
-      auth: sl(),
     ),
   );
 

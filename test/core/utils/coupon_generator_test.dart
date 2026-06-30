@@ -5,57 +5,99 @@ void main() {
   group('CouponGenerator', () {
     const userId = 'user_abc_123';
     const promotionId = 'promo_xyz_456';
-    const commerceId = 'commerce_789';
+    const couponId = 'coupon_001';
+    final expiresAt = DateTime.now().add(const Duration(hours: 24));
 
-    group('generateCouponCode', () {
-      test('genera un código no vacío', () {
-        final code = CouponGenerator.generateCouponCode(
+    group('generateToken', () {
+      test('genera un token no vacío', () {
+        final token = CouponGenerator.generateToken(
+          couponId: couponId,
           userId: userId,
           promotionId: promotionId,
-          commerceId: commerceId,
+          expiresAt: expiresAt,
         );
-        expect(code, isNotEmpty);
+        expect(token, isNotEmpty);
       });
 
-      test('dos llamadas con los mismos parámetros generan códigos distintos',
-          () {
-        final code1 = CouponGenerator.generateCouponCode(
+      test('dos llamadas generan tokens distintos (IV aleatorio)', () {
+        final token1 = CouponGenerator.generateToken(
+          couponId: couponId,
           userId: userId,
           promotionId: promotionId,
-          commerceId: commerceId,
+          expiresAt: expiresAt,
         );
-        final code2 = CouponGenerator.generateCouponCode(
+        final token2 = CouponGenerator.generateToken(
+          couponId: couponId,
           userId: userId,
           promotionId: promotionId,
-          commerceId: commerceId,
+          expiresAt: expiresAt,
         );
-        // Cada generación tiene timestamp/uuid único
-        expect(code1, isNot(equals(code2)));
+        expect(token1, isNot(equals(token2)));
       });
     });
 
-    group('generateQRData / validateQRData', () {
-      test('los datos generados son válidos al momento de la validación', () {
-        final qrData = CouponGenerator.generateQRData(
-          couponId: 'coupon_001',
+    group('validateToken', () {
+      test('token válido retorna el payload con los datos correctos', () {
+        final token = CouponGenerator.generateToken(
+          couponId: couponId,
           userId: userId,
           promotionId: promotionId,
-          commerceId: commerceId,
+          expiresAt: expiresAt,
         );
-        expect(qrData, isNotEmpty);
 
-        final result = CouponGenerator.validateQRData(qrData);
+        final result = CouponGenerator.validateToken(token);
         expect(result, isNotNull);
-        expect(result!['couponId'], equals('coupon_001'));
-        expect(result['userId'], equals(userId));
-        expect(result['promotionId'], equals(promotionId));
-        expect(result['commerceId'], equals(commerceId));
+        expect(result!['cid'], equals(couponId));
+        expect(result['uid'], equals(userId));
+        expect(result['pid'], equals(promotionId));
       });
 
-      test('datos QR alterados retornan null', () {
-        const tampered = 'datos_invalidos_xyz';
-        final result = CouponGenerator.validateQRData(tampered);
+      test('token alterado retorna null', () {
+        final result = CouponGenerator.validateToken('datos_invalidos_xyz');
         expect(result, isNull);
+      });
+
+      test('token expirado retorna null', () {
+        final expiredToken = CouponGenerator.generateToken(
+          couponId: couponId,
+          userId: userId,
+          promotionId: promotionId,
+          expiresAt: DateTime.now().subtract(const Duration(hours: 1)),
+        );
+        final result = CouponGenerator.validateToken(expiredToken);
+        expect(result, isNull);
+      });
+    });
+
+    group('generateQRData', () {
+      test('genera JSON con los campos esperados', () {
+        final token = CouponGenerator.generateToken(
+          couponId: couponId,
+          userId: userId,
+          promotionId: promotionId,
+          expiresAt: expiresAt,
+        );
+        final qrData = CouponGenerator.generateQRData(
+          couponId: couponId,
+          token: token,
+        );
+        expect(qrData, isNotEmpty);
+        expect(qrData, contains('"shinra"'));
+        expect(qrData, contains(couponId));
+      });
+    });
+
+    group('generateChecksum / verifyChecksum', () {
+      test('checksum es verificable', () {
+        const data = 'test_data_string';
+        final checksum = CouponGenerator.generateChecksum(data);
+        expect(CouponGenerator.verifyChecksum(data, checksum), isTrue);
+      });
+
+      test('checksum falla con datos alterados', () {
+        const data = 'test_data_string';
+        final checksum = CouponGenerator.generateChecksum(data);
+        expect(CouponGenerator.verifyChecksum('datos_alterados', checksum), isFalse);
       });
     });
 

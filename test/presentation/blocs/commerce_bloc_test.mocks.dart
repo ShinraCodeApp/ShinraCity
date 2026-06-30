@@ -1,5 +1,5 @@
 import 'package:dartz/dartz.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shinra_city/core/errors/failures.dart';
 import 'package:shinra_city/domain/entities/commerce_entity.dart';
@@ -101,7 +101,7 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
   Future<Either<Failure, CommerceEntity>> createCommerce(CommerceEntity? commerce) =>
       super.noSuchMethod(
         Invocation.method(#createCommerce, [commerce]),
-        returnValue: Future.value(Left(ServerFailure())),
+        returnValue: Future.value(Left(ServerFailure(message: 'error'))),
       );
 
   @override

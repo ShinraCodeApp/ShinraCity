@@ -78,7 +78,7 @@ class AchievementUnlockedDialog extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ).animate(delay: 500.ms).fadeIn(),
-            if (achievement.pointsReward != null && achievement.pointsReward! > 0) ...[
+            if (achievement.pointsReward > 0) ...[
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),

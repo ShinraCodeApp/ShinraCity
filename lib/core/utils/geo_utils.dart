@@ -38,7 +38,6 @@ class GeoUtils {
 
     var hash = StringBuffer();
     var bits = 0;
-    var bitsTotal = 0;
     var hashValue = 0;
     var isEven = true;
 
@@ -66,7 +65,6 @@ class GeoUtils {
 
       isEven = !isEven;
       bits++;
-      bitsTotal++;
 
       if (bits == 5) {
         hash.write(base32Chars[hashValue]);

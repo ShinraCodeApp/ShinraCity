@@ -122,6 +122,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           'longitude': location.longitude,
           'userId': authState.user.id,
         })
+        .then((_) {})
         .catchError((_) {});
   }
 

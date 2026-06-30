@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../domain/entities/commerce_entity.dart';
 import '../../../domain/entities/user_entity.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/repositories/commerce_repository.dart';
@@ -22,7 +21,6 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
 
   bool _loading = true;
   String? _error;
-  CommerceEntity? _commerce;
   final List<UserEntity> _employees = [];
   final _emailController = TextEditingController();
 
@@ -54,7 +52,6 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         _loading = false;
       }),
       (commerce) async {
-        _commerce = commerce;
         final futures = commerce.authorizedEmployeeIds
             .map((id) => _authRepo.getUserById(id));
         final results = await Future.wait(futures);

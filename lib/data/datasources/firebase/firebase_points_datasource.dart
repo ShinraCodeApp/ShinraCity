@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../domain/entities/achievement_entity.dart';
-import '../../../domain/entities/user_entity.dart';
 
 class FirebasePointsDatasource {
   final FirebaseFirestore _firestore;
@@ -110,7 +108,7 @@ class FirebasePointsDatasource {
     final snapshot = await _firestore
         .collection(AppConstants.achievementsCollection)
         .get();
-    final docs = snapshot.docs.map((d) => {...d.data(), 'id': d.id}).toList();
+    final docs = snapshot.docs.map((d) => <String, dynamic>{...d.data(), 'id': d.id}).toList();
     docs.sort((a, b) => ((b['pointsReward'] ?? 0) as int).compareTo((a['pointsReward'] ?? 0) as int));
     return docs;
   }
@@ -133,7 +131,7 @@ class FirebasePointsDatasource {
     required String commerceId,
     bool onlyActive = true,
   }) async {
-    Query query = _firestore
+    Query<Map<String, dynamic>> query = _firestore
         .collection(AppConstants.rewardsCollection)
         .where('commerceId', isEqualTo: commerceId);
 
@@ -142,7 +140,7 @@ class FirebasePointsDatasource {
     }
 
     final snapshot = await query.get();
-    final docs = snapshot.docs.map((d) => {...d.data() as Map<String, dynamic>, 'id': d.id}).toList();
+    final docs = snapshot.docs.map((d) => <String, dynamic>{...d.data(), 'id': d.id}).toList();
     docs.sort((a, b) => ((a['pointsCost'] ?? 0) as int).compareTo((b['pointsCost'] ?? 0) as int));
     return docs;
   }
@@ -155,7 +153,7 @@ class FirebasePointsDatasource {
         .where('isActive', isEqualTo: true)
         .limit(limit)
         .get();
-    final docs = snapshot.docs.map((d) => {...d.data() as Map<String, dynamic>, 'id': d.id}).toList();
+    final docs = snapshot.docs.map((d) => <String, dynamic>{...d.data(), 'id': d.id}).toList();
     docs.sort((a, b) => ((a['pointsCost'] ?? 0) as int).compareTo((b['pointsCost'] ?? 0) as int));
     return docs;
   }

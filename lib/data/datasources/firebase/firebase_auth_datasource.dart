@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/errors/failures.dart';
 import '../../models/user_model.dart';
@@ -12,7 +11,6 @@ class FirebaseAuthDatasource {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
   final GoogleSignIn _googleSignIn;
-  static const _uuid = Uuid();
 
   FirebaseAuthDatasource({
     required FirebaseAuth auth,

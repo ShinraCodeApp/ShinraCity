@@ -1,7 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shinra_city/core/errors/failures.dart';
 import 'package:shinra_city/domain/entities/commerce_entity.dart';
@@ -105,7 +105,7 @@ class MockPromotionRepository extends Mock implements PromotionRepository {
 
 const _loc = LatLng(-31.4, -64.18);
 
-CommerceEntity _fakeCommerce({String id = 'c1', CommerceCategory category = CommerceCategory.food}) =>
+CommerceEntity _fakeCommerce({String id = 'c1', CommerceCategory category = CommerceCategory.restaurants}) =>
     CommerceEntity(
       id: id,
       ownerId: 'o1',
@@ -199,16 +199,16 @@ void main() {
         when(commerceRepo.getNearbyCommerces(
           location: _loc,
           radiusKm: 5.0,
-          category: CommerceCategory.food,
+          category: CommerceCategory.restaurants,
         )).thenAnswer((_) async => Right([_fakeCommerce()]));
       },
       act: (bloc) => bloc.add(
-        LoadNearbyCommerces(location: _loc, category: CommerceCategory.food),
+        LoadNearbyCommerces(location: _loc, category: CommerceCategory.restaurants),
       ),
       expect: () => [
         MapLoading(),
         isA<MapLoaded>()
-            .having((s) => s.activeCategory, 'category', CommerceCategory.food),
+            .having((s) => s.activeCategory, 'category', CommerceCategory.restaurants),
       ],
     );
   });
@@ -305,7 +305,7 @@ void main() {
           location: _loc,
           radiusKm: 5.0,
         )).thenAnswer((_) async => Right([
-              _fakeCommerce(id: 'c1', category: CommerceCategory.food),
+              _fakeCommerce(id: 'c1', category: CommerceCategory.restaurants),
               _fakeCommerce(id: 'c2', category: CommerceCategory.cafes),
             ]));
       },
@@ -313,7 +313,7 @@ void main() {
         bloc.add(LoadNearbyCommerces(location: _loc));
         await Future.delayed(Duration.zero);
         bloc.add(
-          FilterByCategory(location: _loc, category: CommerceCategory.food),
+          FilterByCategory(location: _loc, category: CommerceCategory.restaurants),
         );
       },
       expect: () => [
@@ -321,7 +321,7 @@ void main() {
         isA<MapLoaded>().having((s) => s.commerces.length, 'all', 2),
         isA<MapLoaded>()
             .having((s) => s.commerces.length, 'filtered', 1)
-            .having((s) => s.activeCategory, 'cat', CommerceCategory.food),
+            .having((s) => s.activeCategory, 'cat', CommerceCategory.restaurants),
       ],
     );
   });

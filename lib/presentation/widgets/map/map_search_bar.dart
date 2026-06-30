@@ -19,7 +19,6 @@ class MapSearchBar extends StatefulWidget {
 class _MapSearchBarState extends State<MapSearchBar> {
   final _controller = TextEditingController();
   Timer? _debounce;
-  bool _isExpanded = false;
 
   @override
   void dispose() {

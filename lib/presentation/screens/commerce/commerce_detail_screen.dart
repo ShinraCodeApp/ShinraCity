@@ -264,7 +264,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
         ),
         const SizedBox(width: 4),
         Text(
-          '(${commerce.reviewCount ?? 0})',
+          '(${commerce.reviewCount})',
           style: AppTextStyles.labelSmall.copyWith(
             color: AppColors.textSecondaryDark,
           ),
@@ -824,12 +824,11 @@ class _PromotionDetailSheet extends StatelessWidget {
                 style: AppTextStyles.labelSmall.copyWith(color: AppColors.gold),
               ),
               const Spacer(),
-              if (promotion.endDate != null)
-                Text(
-                  'Vence: ${_formatDate(promotion.endDate!)}',
-                  style: AppTextStyles.labelSmall
-                      .copyWith(color: AppColors.textSecondaryDark),
-                ),
+              Text(
+                'Vence: ${_formatDate(promotion.endDate)}',
+                style: AppTextStyles.labelSmall
+                    .copyWith(color: AppColors.textSecondaryDark),
+              ),
             ],
           ),
           const SizedBox(height: 20),

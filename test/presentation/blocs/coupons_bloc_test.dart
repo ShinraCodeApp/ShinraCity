@@ -289,7 +289,7 @@ void main() {
 
   group('CancelCouponEvent', () {
     blocTest<CouponsBloc, CouponsState>(
-      'emite [CouponsLoading, UserCouponsLoaded] al cancelar exitosamente',
+      'emite [CouponsLoading, CouponsLoaded] al cancelar exitosamente',
       build: () => _buildBloc(repo),
       setUp: () {
         when(repo.cancelCoupon(couponId: 'cp1', userId: 'u1'))
@@ -300,7 +300,7 @@ void main() {
       act: (bloc) => bloc.add(CancelCouponEvent(couponId: 'cp1')),
       expect: () => [
         CouponsLoading(),
-        isA<UserCouponsLoaded>(),
+        isA<CouponsLoaded>(),
       ],
     );
 

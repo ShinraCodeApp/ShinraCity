@@ -1,5 +1,4 @@
 import 'package:dartz/dartz.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/errors/failures.dart';
 import '../../domain/entities/coupon_entity.dart';
@@ -8,13 +7,10 @@ import '../datasources/firebase/firebase_coupon_datasource.dart';
 
 class CouponRepositoryImpl implements CouponRepository {
   final FirebaseCouponDatasource _datasource;
-  final FirebaseAuth _auth;
 
   CouponRepositoryImpl({
     required FirebaseCouponDatasource datasource,
-    required FirebaseAuth auth,
-  })  : _datasource = datasource,
-        _auth = auth;
+  }) : _datasource = datasource;
 
   @override
   Future<Either<Failure, CouponEntity>> claimCoupon({
@@ -192,7 +188,7 @@ class CouponRepositoryImpl implements CouponRepository {
         'totalRedeemed': snapshot.size,
         'totalSavings': snapshot.docs.fold<double>(
           0,
-          (sum, doc) => sum + ((doc.data() as Map)['savedAmount'] ?? 0.0 as double),
+          (sum, doc) => sum + ((doc.data() as Map<String, dynamic>)['savedAmount'] as num? ?? 0.0),
         ),
       });
     } catch (e) {

@@ -64,15 +64,15 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
   void _populate(PromotionEntity p) {
     _titleController.text = p.title;
     _descriptionController.text = p.description ?? '';
-    _discountValueController.text = p.discountValue?.toString() ?? '';
+    _discountValueController.text = p.discountValue.toString();
     _totalSlotsController.text = p.totalSlots?.toString() ?? '';
     _perUserLimitController.text = p.perUserLimit?.toString() ?? '';
-    _originalPriceController.text = p.originalPrice?.toString() ?? '';
+    _originalPriceController.text = p.originalPrice.toString();
     _discountedPriceController.text = p.discountedPrice?.toString() ?? '';
     _conditionsController.text = p.conditions ?? '';
     _promoCodeController.text = p.promoCode ?? '';
     _type = p.type;
-    _discountType = p.discountType ?? DiscountType.percentage;
+    _discountType = p.discountType;
     _startDate = p.startDate;
     _endDate = p.endDate;
     _isExclusiveForFollowers = p.isExclusiveForFollowers;
