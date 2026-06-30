@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -79,7 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            page.gradient[0].withOpacity(0.15),
+            page.gradient[0].withValues(alpha: 0.15),
             AppColors.backgroundDark,
           ],
         ),

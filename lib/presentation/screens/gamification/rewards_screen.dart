@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
@@ -123,7 +123,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                       Text(
                         'Mis Puntos',
                         style: AppTextStyles.titleMedium.copyWith(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -141,14 +141,14 @@ class _RewardsScreenState extends State<RewardsScreen>
                           Text(
                             levelName,
                             style: AppTextStyles.bodySmall.copyWith(
-                              color: Colors.white.withOpacity(0.8),
+                              color: Colors.white.withValues(alpha: 0.8),
                             ),
                           ),
                           if (nextLevel > points)
                             Text(
                               '${nextLevel - points} pts para el siguiente nivel',
                               style: AppTextStyles.labelSmall.copyWith(
-                                color: Colors.white.withOpacity(0.7),
+                                color: Colors.white.withValues(alpha: 0.7),
                               ),
                             ),
                         ],
@@ -156,7 +156,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                       const SizedBox(height: 6),
                       LinearProgressIndicator(
                         value: progress.clamp(0.0, 1.0),
-                        backgroundColor: Colors.white.withOpacity(0.2),
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
                         valueColor: const AlwaysStoppedAnimation(Colors.white),
                         borderRadius: BorderRadius.circular(4),
                         minHeight: 6,
@@ -211,7 +211,7 @@ class _RewardsScreenState extends State<RewardsScreen>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: canAfford && isAvailable
-              ? AppColors.gold.withOpacity(0.3)
+              ? AppColors.gold.withValues(alpha: 0.3)
               : Colors.white12,
         ),
       ),
@@ -231,7 +231,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                   )
                 : Icon(
                     Icons.card_giftcard,
-                    color: AppColors.gold.withOpacity(0.6),
+                    color: AppColors.gold.withValues(alpha: 0.6),
                     size: 32,
                   ),
           ),
@@ -338,7 +338,7 @@ class _RewardsScreenState extends State<RewardsScreen>
             height: 40,
             decoration: BoxDecoration(
               color: (isEarned ? AppColors.success : AppColors.error)
-                  .withOpacity(0.15),
+                  .withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -428,7 +428,7 @@ class _RewardsScreenState extends State<RewardsScreen>
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color:
-              isUnlocked ? color.withOpacity(0.4) : Colors.transparent,
+              isUnlocked ? color.withValues(alpha: 0.4) : Colors.transparent,
         ),
       ),
       child: Row(
@@ -439,7 +439,7 @@ class _RewardsScreenState extends State<RewardsScreen>
             height: 48,
             decoration: BoxDecoration(
               color: isUnlocked
-                  ? color.withOpacity(0.15)
+                  ? color.withValues(alpha: 0.15)
                   : AppColors.backgroundSurface,
               borderRadius: BorderRadius.circular(12),
               border: isUnlocked ? Border.all(color: color) : null,
@@ -448,7 +448,7 @@ class _RewardsScreenState extends State<RewardsScreen>
               Icons.emoji_events,
               color: isUnlocked
                   ? color
-                  : AppColors.textSecondaryDark.withOpacity(0.5),
+                  : AppColors.textSecondaryDark.withValues(alpha: 0.5),
               size: 24,
             ),
           ),
@@ -472,7 +472,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.15),
+                        color: color.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -512,7 +512,7 @@ class _RewardsScreenState extends State<RewardsScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon,
-              size: 56, color: AppColors.textSecondaryDark.withOpacity(0.5)),
+              size: 56, color: AppColors.textSecondaryDark.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           Text(
             message,

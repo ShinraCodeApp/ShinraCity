@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/promotion_entity.dart';
@@ -27,7 +27,7 @@ class PromotionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: promotion.isVip
-                ? AppColors.gold.withOpacity(0.4)
+                ? AppColors.gold.withValues(alpha: 0.4)
                 : const Color(0xFF1E293B),
           ),
         ),
@@ -158,7 +158,7 @@ class PromotionCard extends StatelessWidget {
       child: Center(
         child: Icon(
           _typeIcon(),
-          color: AppColors.primary.withOpacity(0.4),
+          color: AppColors.primary.withValues(alpha: 0.4),
           size: 48,
         ),
       ),
@@ -206,9 +206,9 @@ class PromotionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         label,

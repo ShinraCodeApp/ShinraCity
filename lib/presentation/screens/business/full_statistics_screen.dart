@@ -1,4 +1,4 @@
-import 'package:fl_chart/fl_chart.dart';
+﻿import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shimmer/shimmer.dart';
@@ -238,7 +238,7 @@ class _FullStatisticsScreenState extends State<FullStatisticsScreen> {
       decoration: BoxDecoration(
         color: AppColors.backgroundCard,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -246,7 +246,7 @@ class _FullStatisticsScreenState extends State<FullStatisticsScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 18),
@@ -318,7 +318,7 @@ class _FullStatisticsScreenState extends State<FullStatisticsScreen> {
           gridData: FlGridData(
             drawVerticalLine: false,
             getDrawingHorizontalLine: (_) => FlLine(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               strokeWidth: 1,
             ),
           ),
@@ -357,7 +357,7 @@ class _FullStatisticsScreenState extends State<FullStatisticsScreen> {
               dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(
                 show: true,
-                color: AppColors.primary.withOpacity(0.12),
+                color: AppColors.primary.withValues(alpha: 0.12),
               ),
             ),
           ],
@@ -379,7 +379,7 @@ class _FullStatisticsScreenState extends State<FullStatisticsScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.error_outline,
-              size: 48, color: AppColors.textSecondaryDark.withOpacity(0.5)),
+              size: 48, color: AppColors.textSecondaryDark.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           Text(
             _error ?? 'Error al cargar estadísticas',

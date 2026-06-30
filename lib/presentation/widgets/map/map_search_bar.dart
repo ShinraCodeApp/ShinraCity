@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../../core/theme/app_theme.dart';
 
@@ -36,7 +36,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
             duration: const Duration(milliseconds: 200),
             height: 52,
             decoration: BoxDecoration(
-              color: AppColors.backgroundCard.withOpacity(0.95),
+              color: AppColors.backgroundCard.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFF1E293B)),
               boxShadow: const [
@@ -82,7 +82,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: AppColors.backgroundCard.withOpacity(0.95),
+              color: AppColors.backgroundCard.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFF1E293B)),
               boxShadow: const [

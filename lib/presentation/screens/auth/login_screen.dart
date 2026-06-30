@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -90,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
               gradient: AppColors.primaryGradient,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.4),
+                  color: AppColors.primary.withValues(alpha: 0.4),
                   blurRadius: 30,
                   spreadRadius: 5,
                 ),
@@ -204,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         Row(
           children: [
-            Expanded(child: Divider(color: Colors.white.withOpacity(0.15))),
+            Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.15))),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
@@ -212,7 +212,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
               ),
             ),
-            Expanded(child: Divider(color: Colors.white.withOpacity(0.15))),
+            Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.15))),
           ],
         ),
         const SizedBox(height: 20),

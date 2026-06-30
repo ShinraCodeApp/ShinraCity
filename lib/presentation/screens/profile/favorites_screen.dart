@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -104,7 +104,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 64, color: AppColors.primary.withOpacity(0.25)),
+          Icon(icon, size: 64, color: AppColors.primary.withValues(alpha: 0.25)),
           const SizedBox(height: 16),
           Text(text,
               style: AppTextStyles.bodyMedium
@@ -187,7 +187,7 @@ class _CommerceTile extends StatelessWidget {
                   Text(
                     commerce.categoryDisplayName,
                     style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.primary.withOpacity(0.8)),
+                        color: AppColors.primary.withValues(alpha: 0.8)),
                   ),
                   const SizedBox(height: 4),
                   Row(

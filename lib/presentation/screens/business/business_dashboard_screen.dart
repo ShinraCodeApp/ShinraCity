@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -262,8 +262,8 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
             color: commerce.isCurrentlyOpen
-                ? AppColors.success.withOpacity(0.15)
-                : AppColors.error.withOpacity(0.15),
+                ? AppColors.success.withValues(alpha: 0.15)
+                : AppColors.error.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
@@ -416,8 +416,8 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: isPositive
-                      ? AppColors.success.withOpacity(0.15)
-                      : AppColors.error.withOpacity(0.15),
+                      ? AppColors.success.withValues(alpha: 0.15)
+                      : AppColors.error.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -582,8 +582,8 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          AppColors.primary.withOpacity(0.2),
-                          AppColors.primary.withOpacity(0),
+                          AppColors.primary.withValues(alpha: 0.2),
+                          AppColors.primary.withValues(alpha: 0),
                         ],
                       ),
                     ),
@@ -630,9 +630,9 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     decoration: BoxDecoration(
-                      color: action.$3.withOpacity(0.1),
+                      color: action.$3.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: action.$3.withOpacity(0.2)),
+                      border: Border.all(color: action.$3.withValues(alpha: 0.2)),
                     ),
                     child: Column(
                       children: [
@@ -692,7 +692,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.confirmation_num, color: AppColors.primary, size: 18),
@@ -738,12 +738,12 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.primary.withOpacity(0.08),
-                    AppColors.primary.withOpacity(0.03),
+                    AppColors.primary.withValues(alpha: 0.08),
+                    AppColors.primary.withValues(alpha: 0.03),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
@@ -868,7 +868,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
+              color: statusColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(Icons.local_offer, color: statusColor, size: 20),
@@ -893,7 +893,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.15),
+                        color: statusColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(

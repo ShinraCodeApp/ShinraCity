@@ -1,17 +1,14 @@
 // ignore_for_file: argument_type_not_assignable
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:shinra_city/core/errors/failures.dart';
 import 'package:shinra_city/domain/entities/user_entity.dart';
-import 'package:shinra_city/domain/repositories/auth_repository.dart';
 import 'package:shinra_city/presentation/blocs/auth/auth_bloc.dart';
 
 import 'auth_bloc_test.mocks.dart';
 
-@GenerateMocks([AuthRepository])
 void main() {
   late MockAuthRepository mockRepo;
   late AuthBloc bloc;

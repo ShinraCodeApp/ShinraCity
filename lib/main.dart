@@ -8,6 +8,7 @@ import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
+import 'domain/repositories/auth_repository.dart';
 import 'firebase_options.dart';
 import 'presentation/blocs/auth/auth_bloc.dart';
 import 'presentation/blocs/map/map_bloc.dart';
@@ -84,31 +85,40 @@ class _AppContent extends StatelessWidget {
       showOnboarding: !_onboardingDone,
     );
 
-    return MaterialApp.router(
-      title: 'ShinraCity',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark,
-      routerConfig: router,
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: const TextScaler.linear(1.0),
-          ),
-          child: child!,
-        );
+    return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (_, current) => current is AuthAuthenticated,
+      listener: (_, __) async {
+        final token = await NotificationService().getToken();
+        if (token != null) {
+          GetIt.instance<AuthRepository>().updateFcmToken(token);
+        }
       },
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      locale: const Locale('es', 'AR'),
-      supportedLocales: const [
-        Locale('es', 'AR'),
-        Locale('en', 'US'),
-      ],
+      child: MaterialApp.router(
+        title: 'ShinraCity',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.dark,
+        routerConfig: router,
+        builder: (context, child) {
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(1.0),
+            ),
+            child: child!,
+          );
+        },
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        locale: const Locale('es', 'AR'),
+        supportedLocales: const [
+          Locale('es', 'AR'),
+          Locale('en', 'US'),
+        ],
+      ),
     );
   }
 }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class AppColors {
@@ -184,12 +184,10 @@ class AppTheme {
         secondary: AppColors.secondary,
         tertiary: AppColors.accent,
         surface: AppColors.backgroundCard,
-        background: AppColors.backgroundDark,
         error: AppColors.error,
         onPrimary: Color(0xFF0A0E1A),
         onSecondary: Colors.white,
         onSurface: AppColors.textPrimaryDark,
-        onBackground: AppColors.textPrimaryDark,
       ),
       scaffoldBackgroundColor: AppColors.backgroundDark,
       appBarTheme: const AppBarTheme(
@@ -267,7 +265,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.backgroundSurface,
-        selectedColor: AppColors.primary.withOpacity(0.2),
+        selectedColor: AppColors.primary.withValues(alpha: 0.2),
         labelStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.textPrimaryDark),
         side: const BorderSide(color: Color(0xFF1E293B)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -285,12 +283,10 @@ class AppTheme {
         secondary: AppColors.secondary,
         tertiary: AppColors.accent,
         surface: AppColors.backgroundCardLight,
-        background: AppColors.backgroundLight,
         error: AppColors.error,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
         onSurface: AppColors.textPrimaryLight,
-        onBackground: AppColors.textPrimaryLight,
       ),
       scaffoldBackgroundColor: AppColors.backgroundLight,
       appBarTheme: const AppBarTheme(

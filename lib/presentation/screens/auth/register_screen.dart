@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -314,7 +314,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget _buildDivider() {
     return Row(
       children: [
-        Expanded(child: Divider(color: Colors.white.withOpacity(0.15))),
+        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.15))),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
@@ -322,7 +322,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
           ),
         ),
-        Expanded(child: Divider(color: Colors.white.withOpacity(0.15))),
+        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.15))),
       ],
     );
   }

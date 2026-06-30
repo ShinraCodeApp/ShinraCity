@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -266,9 +266,9 @@ class _MyBusinessesSectionState extends State<MyBusinessesSection> {
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.12),
+                color: statusColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: statusColor.withOpacity(0.3)),
+                border: Border.all(color: statusColor.withValues(alpha: 0.3)),
               ),
               child: Text(
                 statusLabels[status] ?? status,
@@ -335,9 +335,9 @@ class _MyBusinessesSectionState extends State<MyBusinessesSection> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.08),
+            color: color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withOpacity(0.2)),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -366,9 +366,9 @@ class _MyBusinessesSectionState extends State<MyBusinessesSection> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.error.withOpacity(0.08),
+          color: AppColors.error.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.error.withOpacity(0.25)),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.25)),
         ),
         child: Row(
           children: [

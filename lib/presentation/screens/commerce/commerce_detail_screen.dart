@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
@@ -164,7 +164,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
         child: Icon(
           Icons.storefront,
           size: 72,
-          color: AppColors.primary.withOpacity(0.3),
+          color: AppColors.primary.withValues(alpha: 0.3),
         ),
       ),
     );
@@ -327,9 +327,9 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: meta.$2.withOpacity(0.15),
+        color: meta.$2.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: meta.$2.withOpacity(0.5)),
+        border: Border.all(color: meta.$2.withValues(alpha: 0.5)),
       ),
       child: Text(
         meta.$1,
@@ -617,7 +617,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 56, color: AppColors.textSecondaryDark.withOpacity(0.5)),
+          Icon(icon, size: 56, color: AppColors.textSecondaryDark.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           Text(
             message,

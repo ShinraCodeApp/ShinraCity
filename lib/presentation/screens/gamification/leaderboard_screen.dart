@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
@@ -184,9 +184,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           height: height,
           margin: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
-            color: rankColor.withOpacity(0.15),
+            color: rankColor.withValues(alpha: 0.15),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            border: Border.all(color: rankColor.withOpacity(0.4)),
+            border: Border.all(color: rankColor.withValues(alpha: 0.4)),
           ),
           child: Center(
             child: Text(
@@ -212,11 +212,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isCurrentUser
-            ? AppColors.primary.withOpacity(0.1)
+            ? AppColors.primary.withValues(alpha: 0.1)
             : AppColors.backgroundCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isCurrentUser ? AppColors.primary.withOpacity(0.4) : Colors.transparent,
+          color: isCurrentUser ? AppColors.primary.withValues(alpha: 0.4) : Colors.transparent,
         ),
       ),
       child: Row(
@@ -263,7 +263,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.2),
+                          color: AppColors.primary.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -359,7 +359,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         color: AppColors.backgroundCard,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isUnlocked ? color.withOpacity(0.5) : Colors.white12,
+          color: isUnlocked ? color.withValues(alpha: 0.5) : Colors.white12,
         ),
       ),
       child: Column(
@@ -373,7 +373,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               height: 56,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isUnlocked ? color.withOpacity(0.15) : AppColors.backgroundSurface,
+                color: isUnlocked ? color.withValues(alpha: 0.15) : AppColors.backgroundSurface,
                 border: isUnlocked ? Border.all(color: color, width: 1.5) : null,
               ),
               child: Icon(

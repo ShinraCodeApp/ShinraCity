@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -566,7 +566,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: DropdownButtonFormField<CommerceCategory>(
-        value: _category,
+        initialValue: _category,
         dropdownColor: AppColors.backgroundCard,
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
@@ -726,7 +726,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                       color: AppColors.backgroundCard,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.primary.withOpacity(0.4),
+                        color: AppColors.primary.withValues(alpha: 0.4),
                         style: BorderStyle.solid,
                       ),
                     ),

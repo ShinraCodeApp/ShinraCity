@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -111,7 +111,7 @@ class _SearchScreenState extends State<SearchScreen> {
               decoration: BoxDecoration(
                 color: AppColors.backgroundSurface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
               ),
               child: TextField(
                 controller: _controller,
@@ -227,7 +227,7 @@ class _SearchScreenState extends State<SearchScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.search,
-              size: 64, color: AppColors.primary.withOpacity(0.3)),
+              size: 64, color: AppColors.primary.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
           Text(
             'Busca restaurantes, cafeterías,\nfarmácias y más',
@@ -246,7 +246,7 @@ class _SearchScreenState extends State<SearchScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.store_mall_directory_outlined,
-              size: 64, color: AppColors.textSecondaryDark.withOpacity(0.5)),
+              size: 64, color: AppColors.textSecondaryDark.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           Text(
             'Sin resultados',
@@ -350,7 +350,7 @@ class _CategoryChip extends StatelessWidget {
           border: Border.all(
             color: selected
                 ? AppColors.primary
-                : AppColors.primary.withOpacity(0.2),
+                : AppColors.primary.withValues(alpha: 0.2),
           ),
         ),
         child: Row(
@@ -433,7 +433,7 @@ class _CommerceSearchTile extends StatelessWidget {
                   Text(
                     commerce.categoryDisplayName,
                     style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.primary.withOpacity(0.8)),
+                        .copyWith(color: AppColors.primary.withValues(alpha: 0.8)),
                   ),
                   const SizedBox(height: 4),
                   Row(

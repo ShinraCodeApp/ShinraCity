@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -100,7 +100,7 @@ class ProfileScreen extends StatelessWidget {
                       gradient: AppColors.primaryGradient,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.4),
+                          color: AppColors.primary.withValues(alpha: 0.4),
                           blurRadius: 20,
                           spreadRadius: 2,
                         ),
@@ -151,9 +151,9 @@ class ProfileScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _getLevelColor(user.level).withOpacity(0.15),
+                  color: _getLevelColor(user.level).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _getLevelColor(user.level).withOpacity(0.3)),
+                  border: Border.all(color: _getLevelColor(user.level).withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   user.levelDisplayName,
@@ -181,12 +181,12 @@ class ProfileScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            levelColor.withOpacity(0.15),
-            levelColor.withOpacity(0.05),
+            levelColor.withValues(alpha: 0.15),
+            levelColor.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: levelColor.withOpacity(0.3)),
+        border: Border.all(color: levelColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,7 +220,7 @@ class ProfileScreen extends StatelessWidget {
             size: 8,
             padding: 0,
             selectedColor: levelColor,
-            unselectedColor: levelColor.withOpacity(0.2),
+            unselectedColor: levelColor.withValues(alpha: 0.2),
             roundedEdges: const Radius.circular(4),
           ),
           const SizedBox(height: 8),
@@ -316,7 +316,7 @@ class ProfileScreen extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppColors.accent.withOpacity(0.3),
+            color: AppColors.accent.withValues(alpha: 0.3),
             blurRadius: 8,
           ),
         ],
@@ -388,7 +388,7 @@ class ProfileScreen extends StatelessWidget {
                   leading: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.15),
+                      color: AppColors.error.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: const Icon(Icons.admin_panel_settings, color: AppColors.error, size: 18),
@@ -400,7 +400,7 @@ class ProfileScreen extends StatelessWidget {
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.15),
+                      color: AppColors.error.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -603,7 +603,7 @@ class ProfileScreen extends StatelessWidget {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.12),
+                            color: AppColors.primary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(item.$1, color: AppColors.primary, size: 20),
@@ -666,7 +666,7 @@ class ProfileScreen extends StatelessWidget {
         Text(
           'ShinraCity v1.0.0',
           style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textSecondaryDark.withOpacity(0.5),
+            color: AppColors.textSecondaryDark.withValues(alpha: 0.5),
             fontSize: 11,
           ),
         ),

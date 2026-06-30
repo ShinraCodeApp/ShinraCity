@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -147,7 +147,7 @@ class _CouponCard extends StatelessWidget {
           color: AppColors.backgroundCard,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isValid ? AppColors.primary.withOpacity(0.3) : const Color(0xFF1E293B),
+            color: isValid ? AppColors.primary.withValues(alpha: 0.3) : const Color(0xFF1E293B),
           ),
         ),
         child: Row(
@@ -292,7 +292,7 @@ class _CouponDetailSheet extends StatelessWidget {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
+                            color: AppColors.primary.withValues(alpha: 0.3),
                             blurRadius: 20,
                             spreadRadius: 2,
                           ),
@@ -355,11 +355,11 @@ class _CouponDetailSheet extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isUrgent
-            ? AppColors.warning.withOpacity(0.1)
+            ? AppColors.warning.withValues(alpha: 0.1)
             : AppColors.backgroundSurface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isUrgent ? AppColors.warning.withOpacity(0.3) : const Color(0xFF1E293B),
+          color: isUrgent ? AppColors.warning.withValues(alpha: 0.3) : const Color(0xFF1E293B),
         ),
       ),
       child: Row(
@@ -399,8 +399,8 @@ class _CouponDetailSheet extends StatelessWidget {
           height: 88,
           decoration: BoxDecoration(
             color: coupon.status == CouponStatus.used
-                ? AppColors.success.withOpacity(0.15)
-                : AppColors.error.withOpacity(0.15),
+                ? AppColors.success.withValues(alpha: 0.15)
+                : AppColors.error.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
           child: Icon(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -151,7 +151,7 @@ class _PlanUpgradeScreenState extends State<PlanUpgradeScreen> {
       decoration: BoxDecoration(
         color: AppColors.backgroundSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -185,9 +185,9 @@ class _PlanUpgradeScreenState extends State<PlanUpgradeScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.success.withOpacity(0.15),
+              color: AppColors.success.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.success.withOpacity(0.4)),
+              border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
             ),
             child: Text(
               'Activo',
@@ -234,14 +234,14 @@ class _PlanUpgradeScreenState extends State<PlanUpgradeScreen> {
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withOpacity(0.12)
+              ? AppColors.primary.withValues(alpha: 0.12)
               : AppColors.backgroundCard,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
                 ? AppColors.primary
                 : isPremium
-                    ? AppColors.gold.withOpacity(0.4)
+                    ? AppColors.gold.withValues(alpha: 0.4)
                     : const Color(0xFF1E293B),
             width: isSelected ? 2 : 1,
           ),
@@ -317,7 +317,7 @@ class _PlanUpgradeScreenState extends State<PlanUpgradeScreen> {
                       color: AppColors.backgroundSurface,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: AppColors.textSecondaryDark.withOpacity(0.3)),
+                          color: AppColors.textSecondaryDark.withValues(alpha: 0.3)),
                     ),
                     child: Text(
                       'Plan actual',
@@ -342,7 +342,7 @@ class _PlanUpgradeScreenState extends State<PlanUpgradeScreen> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                          color: AppColors.textSecondaryDark.withOpacity(0.4)),
+                          color: AppColors.textSecondaryDark.withValues(alpha: 0.4)),
                     ),
                   ),
               ],
@@ -363,7 +363,7 @@ class _PlanUpgradeScreenState extends State<PlanUpgradeScreen> {
                         child: Text(
                           f,
                           style: AppTextStyles.bodySmall
-                              .copyWith(color: Colors.white.withOpacity(0.85)),
+                              .copyWith(color: Colors.white.withValues(alpha: 0.85)),
                         ),
                       ),
                     ],
@@ -554,7 +554,7 @@ class _CycleButton extends StatelessWidget {
           color: selected ? AppColors.primary : AppColors.backgroundSurface,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: selected ? AppColors.primary : AppColors.primary.withOpacity(0.2),
+            color: selected ? AppColors.primary : AppColors.primary.withValues(alpha: 0.2),
           ),
         ),
         child: Text(

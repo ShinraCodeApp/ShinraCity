@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -197,7 +197,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                      color: AppColors.primary.withOpacity(0.5), width: 2),
+                      color: AppColors.primary.withValues(alpha: 0.5), width: 2),
                   color: AppColors.backgroundSurface,
                 ),
                 child: ClipOval(
@@ -347,7 +347,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           Switch.adaptive(
             value: value,
             onChanged: readOnly ? null : onChanged,
-            activeColor: AppColors.primary,
+            activeThumbColor: AppColors.primary,
           ),
         ],
       ),
@@ -372,7 +372,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.textSecondaryDark.withOpacity(0.3),
+                color: AppColors.textSecondaryDark.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -382,7 +382,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child:
@@ -401,7 +401,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child:

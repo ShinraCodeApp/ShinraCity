@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -249,7 +249,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       itemCount: _notifications!.length,
       separatorBuilder: (_, __) => Divider(
         height: 1,
-        color: (isDark ? Colors.white : Colors.black).withOpacity(0.06),
+        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.06),
         indent: 72,
       ),
       itemBuilder: (context, i) {
@@ -266,8 +266,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final icon = _iconFor(notif.type);
     final bg = isDark ? AppColors.backgroundCard : Colors.white;
     final unreadBg = isDark
-        ? AppColors.backgroundCard.withOpacity(0.95)
-        : AppColors.primary.withOpacity(0.04);
+        ? AppColors.backgroundCard.withValues(alpha: 0.95)
+        : AppColors.primary.withValues(alpha: 0.04);
 
     return Material(
       color: notif.isRead ? bg : unreadBg,
@@ -282,7 +282,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 22),
@@ -334,7 +334,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       style: TextStyle(
                         fontSize: 11,
                         color: (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)
-                            .withOpacity(0.7),
+                            .withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -390,7 +390,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           Icon(Icons.notifications_none_rounded,
               size: 72,
               color: (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)
-                  .withOpacity(0.4)),
+                  .withValues(alpha: 0.4)),
           const SizedBox(height: 16),
           Text(
             'Sin notificaciones',

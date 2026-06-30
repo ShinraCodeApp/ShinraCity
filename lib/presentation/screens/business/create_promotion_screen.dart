@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -249,7 +249,7 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.primary.withOpacity(0.15)
+                      ? AppColors.primary.withValues(alpha: 0.15)
                       : AppColors.backgroundSurface,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
@@ -310,7 +310,7 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
           color: AppColors.backgroundSurface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             style: BorderStyle.solid,
           ),
         ),
@@ -347,7 +347,7 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.add_photo_alternate_outlined,
-                          color: AppColors.primary.withOpacity(0.6),
+                          color: AppColors.primary.withValues(alpha: 0.6),
                           size: 36),
                       const SizedBox(height: 8),
                       Text(
@@ -424,7 +424,7 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppColors.primary.withOpacity(0.15)
+                        ? AppColors.primary.withValues(alpha: 0.15)
                         : AppColors.backgroundSurface,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
@@ -716,7 +716,7 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.gold.withOpacity(0.15)
+                      ? AppColors.gold.withValues(alpha: 0.15)
                       : AppColors.backgroundSurface,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
@@ -751,7 +751,7 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
       decoration: BoxDecoration(
         color: AppColors.backgroundSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: value ? AppColors.primary.withOpacity(0.3) : Colors.white12),
+        border: Border.all(color: value ? AppColors.primary.withValues(alpha: 0.3) : Colors.white12),
       ),
       child: Row(
         children: [
@@ -772,7 +772,7 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.primary,
+            activeThumbColor: AppColors.primary,
           ),
         ],
       ),

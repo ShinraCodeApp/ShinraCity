@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
@@ -89,7 +89,7 @@ class _PromotionsListScreenState extends State<PromotionsListScreen> {
               label: Text(labels[i]),
               selected: selected,
               onSelected: (_) => setState(() => _filterStatus = statuses[i]),
-              selectedColor: AppColors.primary.withOpacity(0.2),
+              selectedColor: AppColors.primary.withValues(alpha: 0.2),
               checkmarkColor: AppColors.primary,
               labelStyle: AppTextStyles.bodySmall.copyWith(
                 color: selected
@@ -212,7 +212,7 @@ class _PromotionsListScreenState extends State<PromotionsListScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.15),
+                        color: statusColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(

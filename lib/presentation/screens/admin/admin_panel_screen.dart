@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -44,9 +44,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.15),
+                color: AppColors.error.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.error.withOpacity(0.5)),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.5)),
               ),
               child: Text(
                 'ADMIN',
@@ -172,7 +172,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
           decoration: BoxDecoration(
             color: AppColors.backgroundCard,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.2)),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,7 +246,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
       decoration: BoxDecoration(
         color: AppColors.backgroundCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -308,9 +308,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.15),
+          color: color.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.5)),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
         ),
         child: Icon(icon, color: color, size: 16),
       ),
@@ -479,7 +479,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.15),
+              color: statusColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -591,9 +591,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isSuspended
-              ? AppColors.error.withOpacity(0.4)
+              ? AppColors.error.withValues(alpha: 0.4)
               : role == 'admin' || role == 'superAdmin'
-                  ? AppColors.secondary.withOpacity(0.3)
+                  ? AppColors.secondary.withValues(alpha: 0.3)
                   : Colors.transparent,
         ),
       ),
@@ -637,7 +637,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
-                              color: _roleColor(role).withOpacity(0.12),
+                              color: _roleColor(role).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -680,7 +680,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 5, vertical: 1),
                               decoration: BoxDecoration(
-                                color: AppColors.error.withOpacity(0.12),
+                                color: AppColors.error.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -838,7 +838,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
       decoration: BoxDecoration(
         color: AppColors.backgroundCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -942,7 +942,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
       decoration: BoxDecoration(
         color: AppColors.backgroundCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -952,7 +952,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withOpacity(0.15),
+                  color: AppColors.warning.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -1412,7 +1412,7 @@ class _PricesEditorState extends State<_PricesEditor> {
       decoration: BoxDecoration(
         color: AppColors.backgroundCard,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1428,7 +1428,7 @@ class _PricesEditorState extends State<_PricesEditor> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -1467,11 +1467,11 @@ class _PricesEditorState extends State<_PricesEditor> {
                             horizontal: 12, vertical: 10),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: color.withOpacity(0.3)),
+                          borderSide: BorderSide(color: color.withValues(alpha: 0.3)),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: color.withOpacity(0.2)),
+                          borderSide: BorderSide(color: color.withValues(alpha: 0.2)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -1502,7 +1502,7 @@ class _PricesEditorState extends State<_PricesEditor> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 5, vertical: 1),
                           decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.15),
+                            color: AppColors.success.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -1527,11 +1527,11 @@ class _PricesEditorState extends State<_PricesEditor> {
                             horizontal: 12, vertical: 10),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: color.withOpacity(0.3)),
+                          borderSide: BorderSide(color: color.withValues(alpha: 0.3)),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: color.withOpacity(0.2)),
+                          borderSide: BorderSide(color: color.withValues(alpha: 0.2)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -1630,9 +1630,9 @@ class _AdminGateDialogState extends State<_AdminGateDialog> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary.withOpacity(0.15),
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                   foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
+                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
                 ),
                 icon: const Icon(Icons.fingerprint),
                 label: const Text('Usar huella digital'),
@@ -1873,7 +1873,7 @@ class _CreateCommerceSheetState extends State<_CreateCommerceSheet> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 14),
                 child: DropdownButtonFormField<CommerceCategory>(
-                  value: _category,
+                  initialValue: _category,
                   dropdownColor: AppColors.backgroundCard,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(labelText: '🗂️ Categoría'),

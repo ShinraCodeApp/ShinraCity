@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../core/theme/app_theme.dart';
@@ -279,7 +279,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
             Icon(
               Icons.people_outline,
               size: 64,
-              color: AppColors.textSecondaryDark.withOpacity(0.4),
+              color: AppColors.textSecondaryDark.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
             Text(
@@ -291,7 +291,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
             Text(
               'Usá el botón "Agregar" para dar acceso\na un colaborador para escanear cupones.',
               style: AppTextStyles.bodySmall
-                  .copyWith(color: AppColors.textSecondaryDark.withOpacity(0.7)),
+                  .copyWith(color: AppColors.textSecondaryDark.withValues(alpha: 0.7)),
               textAlign: TextAlign.center,
             ),
           ],
@@ -326,7 +326,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: AppColors.primary.withOpacity(0.15),
+            backgroundColor: AppColors.primary.withValues(alpha: 0.15),
             backgroundImage: employee.photoUrl != null
                 ? NetworkImage(employee.photoUrl!)
                 : null,
@@ -360,7 +360,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
             padding:
                 const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.success.withOpacity(0.12),
+              color: AppColors.success.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -388,7 +388,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         children: [
           Icon(Icons.error_outline,
               size: 48,
-              color: AppColors.textSecondaryDark.withOpacity(0.5)),
+              color: AppColors.textSecondaryDark.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           Text(
             _error ?? 'Error al cargar empleados',

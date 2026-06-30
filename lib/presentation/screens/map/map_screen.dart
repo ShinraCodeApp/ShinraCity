@@ -181,7 +181,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     border: Border.all(color: Colors.white, width: 2.5),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.blue.withOpacity(0.4),
+                        color: Colors.blue.withValues(alpha: 0.4),
                         blurRadius: 10,
                         spreadRadius: 4,
                       ),
@@ -281,7 +281,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -395,12 +395,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: AppColors.primary.withOpacity(0.8),
+                      color: AppColors.primary.withValues(alpha: 0.8),
                       width: 2.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.4),
+                        color: AppColors.primary.withValues(alpha: 0.4),
                         blurRadius: 10,
                         spreadRadius: 3,
                       ),
@@ -413,14 +413,14 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 height: size - (hasPromo ? 8 : 0),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: baseColor.withOpacity(opacity),
+                  color: baseColor.withValues(alpha: opacity),
                   border: Border.all(
-                    color: Colors.white.withOpacity(isOpen ? 0.6 : 0.3),
+                    color: Colors.white.withValues(alpha: isOpen ? 0.6 : 0.3),
                     width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: baseColor.withOpacity(0.4),
+                      color: baseColor.withValues(alpha: 0.4),
                       blurRadius: 6,
                       spreadRadius: 1,
                     ),
@@ -430,7 +430,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     ? const Icon(Icons.local_offer, color: Colors.white, size: 16)
                     : Icon(
                         _getCategoryIcon(commerce.category),
-                        color: Colors.white.withOpacity(isOpen ? 0.9 : 0.5),
+                        color: Colors.white.withValues(alpha: isOpen ? 0.9 : 0.5),
                         size: 14,
                       ),
               ),
@@ -444,8 +444,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           point: commerce.location,
           radius: AppConstants.geofenceRadiusMeters,
           useRadiusInMeter: true,
-          color: baseColor.withOpacity(0.08),
-          borderColor: baseColor.withOpacity(0.4),
+          color: baseColor.withValues(alpha: 0.08),
+          borderColor: baseColor.withValues(alpha: 0.4),
           borderStrokeWidth: 1,
         ));
       }
@@ -609,7 +609,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
                     label: Text(_names[cat] ?? cat.name),
                     selected: _selected == cat,
                     onSelected: (_) => _applyFilter(context, cat),
-                    selectedColor: AppColors.primary.withOpacity(0.2),
+                    selectedColor: AppColors.primary.withValues(alpha: 0.2),
                     checkmarkColor: AppColors.primary,
                     labelStyle: AppTextStyles.bodySmall.copyWith(
                       color: _selected == cat ? AppColors.primary : Colors.white,

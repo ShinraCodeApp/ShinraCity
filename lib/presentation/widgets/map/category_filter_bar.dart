@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/commerce_entity.dart';
 
@@ -75,7 +75,7 @@ class CategoryFilterBar extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.backgroundCard.withOpacity(0.95),
+          color: isSelected ? AppColors.primary : AppColors.backgroundCard.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? AppColors.primary : const Color(0xFF1E293B),
