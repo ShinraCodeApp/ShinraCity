@@ -1,6 +1,9 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,10 +11,14 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/device_id.dart';
 import '../../../domain/entities/commerce_entity.dart';
 import '../../../domain/entities/promotion_entity.dart';
+import '../../../domain/entities/review_entity.dart';
+import '../../../domain/repositories/commerce_repository.dart';
+import '../../../services/injection_container.dart';
 import '../../blocs/commerce/commerce_bloc.dart';
 import '../../blocs/promotions/promotions_bloc.dart';
 import '../../blocs/coupons/coupons_bloc.dart';
 import '../../widgets/promotion_card.dart';
+import '../../widgets/review_submission_sheet.dart';
 
 class CommerceDetailScreen extends StatefulWidget {
   final String commerceId;
@@ -29,16 +36,33 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
   bool _isFollowing = false;
   CommerceEntity? _currentCommerce;
   String _deviceId = '';
+  List<ReviewEntity> _reviews = [];
+  bool _reviewsLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     context.read<CommerceBloc>().add(LoadCommerceDetail(widget.commerceId));
     context.read<PromotionsBloc>().add(
           LoadCommercePromotions(commerceId: widget.commerceId),
         );
     getDeviceId().then((id) => _deviceId = id);
+    _loadReviews();
+  }
+
+  Future<void> _loadReviews() async {
+    setState(() => _reviewsLoading = true);
+    final result = await sl<CommerceRepository>()
+        .getCommerceReviews(commerceId: widget.commerceId);
+    if (!mounted) return;
+    result.fold(
+      (_) => setState(() => _reviewsLoading = false),
+      (reviews) => setState(() {
+        _reviews = reviews;
+        _reviewsLoading = false;
+      }),
+    );
   }
 
   @override
@@ -51,20 +75,110 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      body: BlocBuilder<CommerceBloc, CommerceState>(
-        builder: (context, state) {
-          if (state is CommerceDetailLoaded) {
-            final commerce = state.commerce;
-            _isFavorite = state.isFavorite;
-            _isFollowing = state.isFollowing;
-            _currentCommerce = commerce;
-            return _buildContent(commerce);
+      body: BlocListener<CouponsBloc, CouponsState>(
+        listener: (context, state) {
+          if (state is CouponClaimed) {
+            _showCouponClaimedDialog(state.coupon.promotionTitle);
+          } else if (state is CouponsError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: AppColors.error,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
           }
-          if (state is CommerceError) {
-            return _buildError(state.message);
-          }
-          return _buildLoading();
         },
+        child: BlocBuilder<CommerceBloc, CommerceState>(
+          builder: (context, state) {
+            if (state is CommerceDetailLoaded) {
+              final commerce = state.commerce;
+              _isFavorite = state.isFavorite;
+              _isFollowing = state.isFollowing;
+              _currentCommerce = commerce;
+              return _buildContent(commerce);
+            }
+            if (state is CommerceError) {
+              return _buildError(state.message);
+            }
+            return _buildLoading();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showCouponClaimedDialog(String promotionTitle) {
+    final commerce = _currentCommerce;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.backgroundCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle, color: AppColors.success, size: 40),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '¡Cupón guardado!',
+              style: AppTextStyles.titleLarge.copyWith(color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '"$promotionTitle" está en tus cupones.',
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondaryDark),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            if (commerce != null)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _openInMaps();
+                  },
+                  icon: const Icon(Icons.directions_walk, size: 18),
+                  label: const Text('Ir al local ahora'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.backgroundDark,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  context.push('/coupons');
+                },
+                icon: const Icon(Icons.confirmation_num_outlined, size: 18),
+                label: const Text('Ver mis cupones'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.secondary,
+                  side: const BorderSide(color: AppColors.secondary),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -82,6 +196,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
               _buildPromotionsTab(),
               _buildAboutTab(commerce),
               _buildGalleryTab(commerce),
+              _buildReviewsTab(commerce),
             ],
           ),
         ),
@@ -420,6 +535,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
           Tab(text: 'Promociones'),
           Tab(text: 'Acerca de'),
           Tab(text: 'Galería'),
+          Tab(text: 'Reseñas'),
         ],
         indicatorColor: AppColors.primary,
         labelColor: AppColors.primary,
@@ -612,6 +728,72 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
     );
   }
 
+  Widget _buildReviewsTab(CommerceEntity commerce) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Row(
+            children: [
+              if (_reviews.isNotEmpty) ...[
+                Icon(Icons.star, color: AppColors.gold, size: 18),
+                const SizedBox(width: 4),
+                Text(
+                  (_reviews.map((r) => r.rating).reduce((a, b) => a + b) /
+                          _reviews.length)
+                      .toStringAsFixed(1),
+                  style: AppTextStyles.titleMedium
+                      .copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '(${_reviews.length} reseña${_reviews.length == 1 ? '' : 's'})',
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.textSecondaryDark),
+                ),
+              ] else
+                Text(
+                  'Sin reseñas aún',
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.textSecondaryDark),
+                ),
+              const Spacer(),
+              if (user != null)
+                TextButton.icon(
+                  icon: const Icon(Icons.rate_review_outlined, size: 16),
+                  label: const Text('Reseñar'),
+                  onPressed: () => ReviewSubmissionSheet.show(
+                    context,
+                    commerceId: widget.commerceId,
+                    userId: user.uid,
+                    userName: user.displayName ?? 'Usuario',
+                    userPhotoUrl: user.photoURL,
+                    onReviewSubmitted: _loadReviews,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const Divider(color: Color(0xFF1E293B)),
+        if (_reviewsLoading)
+          const Expanded(child: Center(child: CircularProgressIndicator()))
+        else if (_reviews.isEmpty)
+          Expanded(child: _buildEmpty('Sé el primero en opinar', Icons.rate_review_outlined))
+        else
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: _reviews.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (_, i) => _ReviewCard(review: _reviews[i]),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _buildEmpty(String message, IconData icon) {
     return Center(
       child: Column(
@@ -744,12 +926,118 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
     );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Canjeando "${promotion.title}"...'),
+        content: Text('Guardando "${promotion.title}"...'),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.backgroundCard,
+        duration: const Duration(seconds: 1),
       ),
     );
   }
+}
+
+// ─── Review card ─────────────────────────────────────────────────────────────
+
+class _ReviewCard extends StatelessWidget {
+  final ReviewEntity review;
+
+  const _ReviewCard({required this.review});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF1E293B)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                backgroundImage: review.userPhotoUrl != null
+                    ? NetworkImage(review.userPhotoUrl!)
+                    : null,
+                child: review.userPhotoUrl == null
+                    ? Text(
+                        review.userName.isNotEmpty
+                            ? review.userName[0].toUpperCase()
+                            : '?',
+                        style: AppTextStyles.titleSmall
+                            .copyWith(color: AppColors.primary),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      review.userName,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                          color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      _formatDate(review.createdAt),
+                      style: AppTextStyles.labelSmall
+                          .copyWith(color: AppColors.textSecondaryDark),
+                    ),
+                  ],
+                ),
+              ),
+              RatingBarIndicator(
+                rating: review.rating,
+                itemCount: 5,
+                itemSize: 14,
+                itemBuilder: (_, __) =>
+                    const Icon(Icons.star, color: AppColors.gold),
+              ),
+            ],
+          ),
+          if (review.comment.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              review.comment,
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: Colors.white.withValues(alpha: 0.85), height: 1.5),
+            ),
+          ],
+          if (review.ownerReply != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.backgroundSurface,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.store, size: 14, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      review.ownerReply!,
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: AppColors.textSecondaryDark, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) =>
+      '${date.day}/${date.month}/${date.year}';
 }
 
 // ─── Promotion detail bottom sheet ───────────────────────────────────────────

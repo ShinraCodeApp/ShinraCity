@@ -298,7 +298,8 @@
       <section id="section-businesses" class="hidden">
         <div class="table-card">
           <div class="table-header">
-            <div><div class="table-title">Gestión de Negocios</div><div class="table-count" id="biz-count"></div></div>
+            <div style="display:flex;align-items:center;gap:12px"><div class="table-title">Gestión de Negocios</div><div class="table-count" id="biz-count"></div></div>
+            <button onclick="openCreateBiz()" style="padding:8px 16px;background:linear-gradient(135deg,#F0C020,#FF9500);border:none;border-radius:9px;color:#000;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">➕ Crear negocio</button>
             <div class="search-bar">
               <select class="filter-sel" id="biz-filter" onchange="filterBiz()">
                 <option value="">Todos</option><option value="active">Activos</option>
@@ -801,6 +802,41 @@ function showToast(msg, type='success') {
 const BIZ_CATEGORIES = ['restaurants','cafes','fastFood','bar','bakery','pharmacies','health','beauty','clothing','supermarket','hardware','jewelry','market','streetVendor','entrepreneur','artisans','services','automotive','education','technology','entertainment','sports','tourism','pets','other'];
 const BIZ_CAT_LABELS = {restaurants:'🍽️ Restaurante',cafes:'☕ Cafetería',fastFood:'🍔 Comida Rápida',bar:'🍺 Bar / Pub',bakery:'🥐 Panadería',pharmacies:'💊 Farmacia',health:'🏥 Salud',beauty:'💄 Belleza',clothing:'👕 Ropa',supermarket:'🛒 Supermercado',hardware:'🔩 Ferretería',jewelry:'💎 Joyería',market:'🏪 Feria / Mercado',streetVendor:'🛍️ Vendedor Ambulante',entrepreneur:'🚀 Emprendimiento',artisans:'🎨 Artesanos',services:'🔧 Servicios',automotive:'🚗 Automotriz',education:'📚 Educación',technology:'💻 Tecnología',entertainment:'🎭 Entretenimiento',sports:'⚽ Deportes',tourism:'✈️ Turismo',pets:'🐾 Mascotas',other:'📦 Otros'};
 
+function encodeGeohash(lat, lng, precision = 8) {
+  const B32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+  let idx=0,bit=0,even=true,hash='',latMin=-90,latMax=90,lngMin=-180,lngMax=180;
+  while(hash.length<precision){
+    if(even){const m=(lngMin+lngMax)/2;if(lng>=m){idx=idx*2+1;lngMin=m;}else{idx=idx*2;lngMax=m;}}
+    else{const m=(latMin+latMax)/2;if(lat>=m){idx=idx*2+1;latMin=m;}else{idx=idx*2;latMax=m;}}
+    even=!even;if(++bit===5){hash+=B32[idx];bit=0;idx=0;}
+  }
+  return hash;
+}
+
+function openCreateBiz() {
+  document.getElementById('ebiz-id').value = '';
+  document.getElementById('ebiz-name').value = '';
+  document.getElementById('ebiz-desc').value = '';
+  document.getElementById('ebiz-city').value = '';
+  document.getElementById('ebiz-address').value = '';
+  document.getElementById('ebiz-phone').value = '';
+  document.getElementById('ebiz-email').value = '';
+  document.getElementById('ebiz-website').value = '';
+  document.getElementById('ebiz-whatsapp').value = '';
+  document.getElementById('ebiz-instagram').value = '';
+  document.getElementById('ebiz-category').value = 'other';
+  document.getElementById('ebiz-plan').value = 'free';
+  document.getElementById('ebiz-status').value = 'active';
+  document.getElementById('ebiz-verified').checked = false;
+  document.getElementById('ebiz-featured').checked = false;
+  document.getElementById('ebiz-rating').value = '0';
+  document.getElementById('ebiz-lat').value = '';
+  document.getElementById('ebiz-lng').value = '';
+  document.getElementById('ebiz-modal-title').textContent = '➕ Crear negocio';
+  document.getElementById('ebiz-save-btn').textContent = '➕ Crear negocio';
+  document.getElementById('ebiz-modal').classList.remove('hidden');
+}
+
 function openEditBiz(id) {
   const b = allBiz.find(b => b.id === id);
   if (!b) return;
@@ -820,6 +856,11 @@ function openEditBiz(id) {
   document.getElementById('ebiz-verified').checked = !!b.isVerified;
   document.getElementById('ebiz-featured').checked = !!b.isFeatured;
   document.getElementById('ebiz-rating').value = b.rating || 0;
+  const loc = b.location;
+  document.getElementById('ebiz-lat').value = loc ? (loc.latitude ?? loc._lat ?? '') : '';
+  document.getElementById('ebiz-lng').value = loc ? (loc.longitude ?? loc._long ?? '') : '';
+  document.getElementById('ebiz-modal-title').textContent = '✏️ Editar negocio';
+  document.getElementById('ebiz-save-btn').textContent = '💾 Guardar cambios';
   document.getElementById('ebiz-modal').classList.remove('hidden');
 }
 
@@ -828,11 +869,15 @@ function closeEditBiz() {
 }
 
 async function saveEditBiz() {
-  const id  = document.getElementById('ebiz-id').value;
+  const id  = document.getElementById('ebiz-id').value.trim();
   const btn = document.getElementById('ebiz-save-btn');
+  const isCreate = !id;
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
-    const updates = {
+    const lat = parseFloat(document.getElementById('ebiz-lat').value);
+    const lng = parseFloat(document.getElementById('ebiz-lng').value);
+    const hasCoords = !isNaN(lat) && !isNaN(lng);
+    const data = {
       name:        document.getElementById('ebiz-name').value.trim(),
       description: document.getElementById('ebiz-desc').value.trim(),
       city:        document.getElementById('ebiz-city').value.trim(),
@@ -840,27 +885,49 @@ async function saveEditBiz() {
       phone:       document.getElementById('ebiz-phone').value.trim(),
       email:       document.getElementById('ebiz-email').value.trim(),
       website:     document.getElementById('ebiz-website').value.trim(),
-      'socialLinks.instagram': document.getElementById('ebiz-instagram').value.trim(),
-      'socialLinks.whatsapp':  document.getElementById('ebiz-whatsapp').value.trim(),
+      socialLinks: {
+        instagram: document.getElementById('ebiz-instagram').value.trim(),
+        whatsapp:  document.getElementById('ebiz-whatsapp').value.trim(),
+      },
       category:    document.getElementById('ebiz-category').value,
       plan:        document.getElementById('ebiz-plan').value,
       status:      document.getElementById('ebiz-status').value,
       isVerified:  document.getElementById('ebiz-verified').checked,
       isFeatured:  document.getElementById('ebiz-featured').checked,
       rating:      parseFloat(document.getElementById('ebiz-rating').value) || 0,
-      updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
     };
-    await db.collection('commerces').doc(id).update(updates);
-    const plain = {...updates, updatedAt: new Date()};
-    const a = allBiz.find(b=>b.id===id); if(a) Object.assign(a, plain);
-    const f = filteredBiz.find(b=>b.id===id); if(f) Object.assign(f, plain);
+    if (hasCoords) {
+      data.location = new firebase.firestore.GeoPoint(lat, lng);
+      data.geohash  = encodeGeohash(lat, lng, 8);
+    }
+    if (isCreate) {
+      data.ownerId   = auth.currentUser?.uid || '';
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      data.followerCount = 0; data.reviewCount = 0; data.activePromotionsCount = 0;
+      const ref = await db.collection('commerces').add(data);
+      allBiz.unshift({id: ref.id, ...data, createdAt: new Date()});
+      filteredBiz = [...allBiz];
+      showToast('✅ Negocio creado', 'success');
+    } else {
+      data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      // use dot-notation for nested fields on update
+      const updates = {...data};
+      delete updates.socialLinks;
+      updates['socialLinks.instagram'] = data.socialLinks.instagram;
+      updates['socialLinks.whatsapp']  = data.socialLinks.whatsapp;
+      await db.collection('commerces').doc(id).update(updates);
+      const a = allBiz.find(b=>b.id===id); if(a) Object.assign(a, data);
+      const f = filteredBiz.find(b=>b.id===id); if(f) Object.assign(f, data);
+      showToast('✅ Negocio actualizado', 'success');
+    }
+    document.getElementById('biz-count').textContent = `${allBiz.length} negocios`;
     renderBiz();
     closeEditBiz();
-    showToast('✅ Negocio actualizado', 'success');
   } catch(e) {
     showToast('Error: ' + e.message, 'error');
   } finally {
-    btn.disabled = false; btn.textContent = '💾 Guardar cambios';
+    btn.disabled = false;
+    btn.textContent = isCreate ? '➕ Crear negocio' : '💾 Guardar cambios';
   }
 }
 
@@ -993,7 +1060,7 @@ async function deleteUserAccount() {
 <div id="ebiz-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:18px;width:100%;max-width:620px;max-height:90vh;overflow-y:auto;padding:28px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
-      <h2 style="font-size:17px;font-weight:700">✏️ Editar negocio</h2>
+      <h2 id="ebiz-modal-title" style="font-size:17px;font-weight:700">✏️ Editar negocio</h2>
       <button onclick="closeEditBiz()" style="background:none;border:none;color:var(--text-sec);font-size:22px;cursor:pointer">×</button>
     </div>
     <input type="hidden" id="ebiz-id">
@@ -1090,6 +1157,14 @@ async function deleteUserAccount() {
         <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Rating (0-5)</label>
         <input id="ebiz-rating" type="number" min="0" max="5" step="0.1" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
       </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Latitud</label>
+        <input id="ebiz-lat" type="number" step="any" placeholder="-34.6037" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Longitud</label>
+        <input id="ebiz-lng" type="number" step="any" placeholder="-68.3322" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
       <div style="display:flex;flex-direction:column;gap:12px;padding:6px 0">
         <div style="display:flex;align-items:center;gap:10px">
           <input id="ebiz-verified" type="checkbox" style="width:16px;height:16px;accent-color:var(--success)">
@@ -1103,7 +1178,7 @@ async function deleteUserAccount() {
     </div>
     <div style="display:flex;gap:10px;margin-top:22px">
       <button onclick="closeEditBiz()" style="flex:1;padding:11px;background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;color:var(--text-sec);font-size:13px;cursor:pointer">Cancelar</button>
-      <button id="ebiz-save-btn" onclick="saveEditBiz()" style="flex:2;padding:11px;background:linear-gradient(135deg,#F0C020,#FF9500);border:none;border-radius:9px;color:#000;font-size:13px;font-weight:700;cursor:pointer">💾 Guardar cambios</button>
+      <button id="ebiz-save-btn" onclick="saveEditBiz()" style="flex:2;padding:11px;background:linear-gradient(135deg,#F0C020,#FF9500);border:none;border-radius:9px;color:#000;font-size:13px;font-weight:700;cursor:pointer" data-create-label="➕ Crear negocio" data-edit-label="💾 Guardar cambios">💾 Guardar cambios</button>
     </div>
   </div>
 </div>
