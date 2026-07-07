@@ -108,6 +108,20 @@ app.get('/api/debug-uid/:uid', verifyAdmin, async (req, res) => {
   }
 });
 
+// Debug: check all Firestore user docs against Firebase Auth
+app.get('/api/debug-all-users', verifyAdmin, async (req, res) => {
+  const snap = await admin.firestore().collection('users').limit(20).get();
+  const results = await Promise.all(snap.docs.map(async doc => {
+    try {
+      const u = await admin.auth().getUser(doc.id);
+      return { firestoreId: doc.id, authFound: true, email: u.email, displayName: u.displayName };
+    } catch(e) {
+      return { firestoreId: doc.id, authFound: false, error: e.code };
+    }
+  }));
+  res.json(results);
+});
+
 app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const PORT = process.env.PORT || 3000;
