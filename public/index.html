@@ -156,6 +156,7 @@
     #toast.show{transform:translateY(0);opacity:1}
     #toast.success{border-color:var(--success);color:var(--success)}
     #toast.error{border-color:var(--error);color:var(--error)}
+    #toast.warning{border-color:var(--warning);color:var(--warning)}
   </style>
 </head>
 <body>
@@ -919,6 +920,7 @@ async function saveEditUser() {
     await db.collection('users').doc(uid).update(updates);
 
     // 2. Change password if provided
+    let pwdWarning = null;
     if (newPassword.length >= 6) {
       const idToken = await auth.currentUser.getIdToken(true);
       const res = await fetch('/api/update-password', {
@@ -927,7 +929,14 @@ async function saveEditUser() {
         body: JSON.stringify({ uid, password: newPassword }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al cambiar contraseña');
+      if (!res.ok) {
+        const msg = data.error || '';
+        if (msg.includes('no user record') || msg.includes('no-user') || res.status === 404) {
+          pwdWarning = 'Datos guardados. Este usuario no tiene cuenta de autenticación activa (contraseña no cambiada).';
+        } else {
+          throw new Error(msg || 'Error al cambiar contraseña');
+        }
+      }
     } else if (newPassword.length > 0) {
       throw new Error('La contraseña debe tener al menos 6 caracteres');
     }
@@ -939,7 +948,8 @@ async function saveEditUser() {
     if (f) Object.assign(f, updates);
     renderUsers();
     closeEditUser();
-    showToast('✅ Perfil actualizado', 'success');
+    if (pwdWarning) showToast('⚠️ ' + pwdWarning, 'warning');
+    else showToast('✅ Perfil actualizado', 'success');
   } catch(e) {
     showToast('Error: ' + e.message, 'error');
   } finally {
