@@ -518,8 +518,9 @@ async function loadUsers() {
   usersLoaded = true; usersPage = 0;
   document.getElementById('users-tbody').innerHTML = loadingRow(7);
   try {
-    const snap = await db.collection('users').orderBy('createdAt','desc').limit(500).get();
-    allUsers = snap.docs.map(d => ({id:d.id,...d.data()}));
+    const snap = await db.collection('users').limit(500).get();
+    allUsers = snap.docs.map(d => ({id:d.id,...d.data()}))
+      .sort((a,b) => (b.createdAt?.toMillis?.()??0) - (a.createdAt?.toMillis?.()??0));
     filteredUsers = [...allUsers];
     document.getElementById('users-count').textContent = `${allUsers.length} usuarios`;
     renderUsers();
