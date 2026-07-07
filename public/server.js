@@ -6,25 +6,46 @@ const app = express();
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Initialize Firebase Admin SDK
-try {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw) throw new Error('FIREBASE_SERVICE_ACCOUNT env var not set');
-  const serviceAccount = JSON.parse(raw);
-  // Railway can escape newlines in private_key — normalize them
-  if (serviceAccount.private_key) {
-    serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+// Initialize Firebase Admin SDK using individual env vars (more reliable on Railway)
+function initFirebase() {
+  // Option A: individual env vars (preferred)
+  const clientEmail  = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey   = process.env.FIREBASE_PRIVATE_KEY;
+
+  if (clientEmail && privateKey) {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId:   'shinra-city',
+        clientEmail,
+        privateKey:  privateKey.replace(/\\n/g, '\n'),
+      }),
+    });
+    console.log('Firebase Admin initialized via individual env vars');
+    return;
   }
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    projectId: 'shinra-city',
-  });
-  console.log('Firebase Admin initialized OK');
+
+  // Option B: full JSON blob fallback
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (raw) {
+    const sa = JSON.parse(raw);
+    if (sa.private_key) sa.private_key = sa.private_key.replace(/\\n/g, '\n');
+    admin.initializeApp({ credential: admin.credential.cert(sa), projectId: 'shinra-city' });
+    console.log('Firebase Admin initialized via service account JSON');
+    return;
+  }
+
+  throw new Error('No Firebase credentials found. Set FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY');
+}
+
+try {
+  initFirebase();
 } catch (e) {
   console.error('Firebase Admin init FAILED:', e.message);
 }
 
 async function verifyAdmin(req, res, next) {
+  if (!admin.apps.length)
+    return res.status(503).json({ error: 'Servidor no configurado. Contactá al desarrollador.' });
   const token = (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Sin token' });
   try {
@@ -40,7 +61,6 @@ async function verifyAdmin(req, res, next) {
   }
 }
 
-// Change another user's password
 app.post('/api/update-password', verifyAdmin, async (req, res) => {
   const { uid, password } = req.body;
   if (!uid || !password || password.length < 6)
@@ -53,7 +73,6 @@ app.post('/api/update-password', verifyAdmin, async (req, res) => {
   }
 });
 
-// Delete user from Firebase Auth
 app.post('/api/delete-user', verifyAdmin, async (req, res) => {
   const { uid } = req.body;
   if (!uid) return res.status(400).json({ error: 'UID requerido' });
