@@ -869,6 +869,8 @@ function openEditUser(uid) {
   document.getElementById('edit-uid').value = uid;
   document.getElementById('edit-name').value = u.displayName || '';
   document.getElementById('edit-email').value = u.email || '';
+  document.getElementById('edit-username').value = u.username || u.userName || '';
+  document.getElementById('edit-country').value = u.country || '';
   document.getElementById('edit-role').value = u.role || 'user';
   document.getElementById('edit-level').value = u.level || 'explorer';
   document.getElementById('edit-points').value = u.totalPoints || u.points || 0;
@@ -877,6 +879,7 @@ function openEditUser(uid) {
   document.getElementById('edit-savings').value = u.totalSavings || 0;
   document.getElementById('edit-verified').checked = !!u.isVerified;
   document.getElementById('edit-suspended').checked = !!u.isSuspended;
+  document.getElementById('edit-password').value = '';
   document.getElementById('edit-user-modal').classList.remove('hidden');
 }
 
@@ -884,25 +887,51 @@ function closeEditUser() {
   document.getElementById('edit-user-modal').classList.add('hidden');
 }
 
+function togglePwdVisibility() {
+  const inp = document.getElementById('edit-password');
+  const btn = document.getElementById('pwd-toggle');
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁'; }
+}
+
 async function saveEditUser() {
   const uid = document.getElementById('edit-uid').value;
   const btn = document.getElementById('edit-save-btn');
+  const newPassword = document.getElementById('edit-password').value;
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
+    // 1. Update Firestore fields
     const updates = {
-      displayName: document.getElementById('edit-name').value.trim(),
-      role: document.getElementById('edit-role').value,
-      level: document.getElementById('edit-level').value,
-      totalPoints: parseInt(document.getElementById('edit-points').value) || 0,
-      availablePoints: parseInt(document.getElementById('edit-avail-points').value) || 0,
+      displayName:          document.getElementById('edit-name').value.trim(),
+      username:             document.getElementById('edit-username').value.trim(),
+      country:              document.getElementById('edit-country').value.trim(),
+      role:                 document.getElementById('edit-role').value,
+      level:                document.getElementById('edit-level').value,
+      totalPoints:          parseInt(document.getElementById('edit-points').value) || 0,
+      availablePoints:      parseInt(document.getElementById('edit-avail-points').value) || 0,
       totalCouponsRedeemed: parseInt(document.getElementById('edit-coupons').value) || 0,
-      totalSavings: parseInt(document.getElementById('edit-savings').value) || 0,
-      isVerified: document.getElementById('edit-verified').checked,
-      isSuspended: document.getElementById('edit-suspended').checked,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      totalSavings:         parseInt(document.getElementById('edit-savings').value) || 0,
+      isVerified:           document.getElementById('edit-verified').checked,
+      isSuspended:          document.getElementById('edit-suspended').checked,
+      updatedAt:            firebase.firestore.FieldValue.serverTimestamp(),
     };
     await db.collection('users').doc(uid).update(updates);
-    // Update local cache
+
+    // 2. Change password if provided
+    if (newPassword.length >= 6) {
+      const idToken = await auth.currentUser.getIdToken(true);
+      const res = await fetch('/api/update-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+        body: JSON.stringify({ uid, password: newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al cambiar contraseña');
+    } else if (newPassword.length > 0) {
+      throw new Error('La contraseña debe tener al menos 6 caracteres');
+    }
+
+    // 3. Update local cache
     const u = allUsers.find(u => u.id === uid);
     if (u) Object.assign(u, updates);
     const f = filteredUsers.find(u => u.id === uid);
@@ -914,6 +943,37 @@ async function saveEditUser() {
     showToast('Error: ' + e.message, 'error');
   } finally {
     btn.disabled = false; btn.textContent = '💾 Guardar cambios';
+  }
+}
+
+async function deleteUserAccount() {
+  const uid  = document.getElementById('edit-uid').value;
+  const name = document.getElementById('edit-name').value || uid;
+  if (!confirm(`¿Eliminar permanentemente a "${name}"? Esta acción no se puede deshacer.`)) return;
+  const btn = document.getElementById('edit-delete-btn');
+  btn.disabled = true; btn.textContent = 'Eliminando...';
+  try {
+    // Delete from Firestore
+    await db.collection('users').doc(uid).delete();
+    // Delete from Firebase Auth via server
+    const idToken = await auth.currentUser.getIdToken(true);
+    const res = await fetch('/api/delete-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      body: JSON.stringify({ uid }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al eliminar de Auth');
+    // Update local cache
+    allUsers = allUsers.filter(u => u.id !== uid);
+    filteredUsers = filteredUsers.filter(u => u.id !== uid);
+    document.getElementById('users-count').textContent = `${allUsers.length} usuarios`;
+    renderUsers();
+    closeEditUser();
+    showToast('🗑️ Usuario eliminado', 'success');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = '🗑️ Eliminar usuario';
   }
 }
 </script>
@@ -1055,6 +1115,14 @@ async function saveEditUser() {
         <input id="edit-email" type="text" readonly style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text-sec);font-size:13px;outline:none;cursor:not-allowed">
       </div>
       <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Username</label>
+        <input id="edit-username" type="text" placeholder="@usuario" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">País</label>
+        <input id="edit-country" type="text" placeholder="AR" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div>
         <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Rol</label>
         <select id="edit-role" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
           <option value="user">👤 Usuario</option>
@@ -1098,11 +1166,20 @@ async function saveEditUser() {
         <input id="edit-suspended" type="checkbox" style="width:16px;height:16px;accent-color:var(--error)">
         <label style="font-size:13px;color:var(--text)">🚫 Suspendido</label>
       </div>
+      <div style="grid-column:1/-1">
+        <div style="height:1px;background:var(--border);margin:4px 0 14px"></div>
+        <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">🔑 Nueva contraseña <span style="color:var(--text-sec);font-weight:400">(vacío = no cambiar)</span></label>
+        <div style="position:relative">
+          <input id="edit-password" type="password" placeholder="Mínimo 6 caracteres" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 40px 10px 12px;color:var(--text);font-size:13px;outline:none">
+          <button type="button" onclick="togglePwdVisibility()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-sec);cursor:pointer;font-size:16px;padding:2px" id="pwd-toggle">👁</button>
+        </div>
+      </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:22px">
       <button onclick="closeEditUser()" style="flex:1;padding:11px;background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;color:var(--text-sec);font-size:13px;cursor:pointer">Cancelar</button>
       <button id="edit-save-btn" onclick="saveEditUser()" style="flex:2;padding:11px;background:linear-gradient(135deg,#F0C020,#FF9500);border:none;border-radius:9px;color:#000;font-size:13px;font-weight:700;cursor:pointer">💾 Guardar cambios</button>
     </div>
+    <button id="edit-delete-btn" onclick="deleteUserAccount()" style="width:100%;margin-top:10px;padding:11px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:9px;color:#EF4444;font-size:13px;font-weight:600;cursor:pointer">🗑️ Eliminar usuario</button>
   </div>
 </div>
 
