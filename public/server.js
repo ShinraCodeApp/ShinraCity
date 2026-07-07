@@ -9,13 +9,19 @@ app.use(express.static(__dirname));
 // Initialize Firebase Admin SDK
 try {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  const credential = raw
-    ? admin.credential.cert(JSON.parse(raw))
-    : admin.credential.applicationDefault();
-  admin.initializeApp({ credential, projectId: 'shinra-city' });
-  console.log('Firebase Admin initialized');
+  if (!raw) throw new Error('FIREBASE_SERVICE_ACCOUNT env var not set');
+  const serviceAccount = JSON.parse(raw);
+  // Railway can escape newlines in private_key — normalize them
+  if (serviceAccount.private_key) {
+    serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+  }
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    projectId: 'shinra-city',
+  });
+  console.log('Firebase Admin initialized OK');
 } catch (e) {
-  console.warn('Firebase Admin init warning:', e.message);
+  console.error('Firebase Admin init FAILED:', e.message);
 }
 
 async function verifyAdmin(req, res, next) {
