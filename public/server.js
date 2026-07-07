@@ -84,6 +84,30 @@ app.post('/api/delete-user', verifyAdmin, async (req, res) => {
   }
 });
 
+// Debug: compare Firestore doc ID vs real Firebase Auth UID
+app.get('/api/debug-me', verifyAdmin, async (req, res) => {
+  try {
+    const authUser = await admin.auth().getUserByEmail('admin@shinracity.com');
+    res.json({
+      tokenUid: req.adminUid,
+      authUidForAdminEmail: authUser.uid,
+      match: req.adminUid === authUser.uid,
+    });
+  } catch(e) {
+    res.json({ tokenUid: req.adminUid, error: e.message });
+  }
+});
+
+// Debug: check if a UID exists in Firebase Auth
+app.get('/api/debug-uid/:uid', verifyAdmin, async (req, res) => {
+  try {
+    const u = await admin.auth().getUser(req.params.uid);
+    res.json({ found: true, uid: u.uid, email: u.email });
+  } catch(e) {
+    res.json({ found: false, code: e.code, message: e.message });
+  }
+});
+
 app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const PORT = process.env.PORT || 3000;
