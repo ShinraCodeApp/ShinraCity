@@ -75,6 +75,7 @@ class UserEntity extends Equatable {
   final DateTime? lastActiveAt;
   final String? referralCode;
   final String? referredBy;
+  final String? bio;
 
   const UserEntity({
     required this.id,
@@ -104,6 +105,7 @@ class UserEntity extends Equatable {
     this.lastActiveAt,
     this.referralCode,
     this.referredBy,
+    this.bio,
   });
 
   String get levelDisplayName {
@@ -155,6 +157,7 @@ class UserEntity extends Equatable {
     bool? locationEnabled,
     String? fcmToken,
     DateTime? lastActiveAt,
+    String? bio,
   }) {
     return UserEntity(
       id: id,
@@ -184,6 +187,7 @@ class UserEntity extends Equatable {
       lastActiveAt: lastActiveAt ?? this.lastActiveAt,
       referralCode: referralCode,
       referredBy: referredBy,
+      bio: bio ?? this.bio,
     );
   }
 

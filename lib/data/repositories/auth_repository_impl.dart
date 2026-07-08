@@ -142,6 +142,7 @@ class AuthRepositoryImpl implements AuthRepository {
     String? displayName,
     String? photoUrl,
     String? phoneNumber,
+    String? bio,
   }) async {
     try {
       final current = await _datasource.getCurrentUser();
@@ -149,6 +150,7 @@ class AuthRepositoryImpl implements AuthRepository {
       if (displayName != null) updates['displayName'] = displayName;
       if (photoUrl != null) updates['photoUrl'] = photoUrl;
       if (phoneNumber != null) updates['phoneNumber'] = phoneNumber;
+      if (bio != null) updates['bio'] = bio;
       updates['updatedAt'] = FieldValue.serverTimestamp();
 
       await _firestore.collection('users').doc(current.id).update(updates);

@@ -42,7 +42,9 @@ class ProfileScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildLevelCard(user),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                _buildBioCard(user),
+                const SizedBox(height: 16),
                 _buildStatsRow(user),
                 const SizedBox(height: 20),
                 _buildAchievementsSection(user),
@@ -90,7 +92,7 @@ class ProfileScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SizedBox(height: 40),
+              const SizedBox(height: 44),
               Stack(
                 children: [
                   Container(
@@ -143,26 +145,38 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 user.displayName ?? 'Usuario',
                 style: AppTextStyles.titleLarge.copyWith(color: Colors.white),
               ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getLevelColor(user.level).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _getLevelColor(user.level).withValues(alpha: 0.3)),
+              const SizedBox(height: 3),
+              Text(
+                user.email,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.primary.withValues(alpha: 0.8),
                 ),
-                child: Text(
-                  user.levelDisplayName,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: _getLevelColor(user.level),
-                    fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getLevelColor(user.level).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: _getLevelColor(user.level).withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      user.levelDisplayName,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: _getLevelColor(user.level),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -240,14 +254,77 @@ class ProfileScreen extends StatelessWidget {
     ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.2, end: 0);
   }
 
+  Widget _buildBioCard(UserEntity user) {
+    final memberSince = '${user.createdAt.day}/${user.createdAt.month}/${user.createdAt.year}';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF1E293B)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (user.bio != null && user.bio!.isNotEmpty) ...[
+            Text(
+              user.bio!,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: Colors.white.withValues(alpha: 0.85),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Divider(color: Color(0xFF1E293B), height: 1),
+            const SizedBox(height: 10),
+          ],
+          Row(
+            children: [
+              Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondaryDark),
+              const SizedBox(width: 6),
+              Text(
+                'Miembro desde $memberSince',
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
+              ),
+              if (user.phoneNumber != null && user.phoneNumber!.isNotEmpty) ...[
+                const SizedBox(width: 16),
+                Icon(Icons.phone_outlined, size: 14, color: AppColors.textSecondaryDark),
+                const SizedBox(width: 6),
+                Text(
+                  user.phoneNumber!,
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    ).animate().fadeIn(delay: 150.ms);
+  }
+
   Widget _buildStatsRow(UserEntity user) {
-    return Row(
+    return Column(
       children: [
-        _buildStatCard('Cupones', user.totalCouponsRedeemed.toString(), Icons.confirmation_num),
-        const SizedBox(width: 12),
-        _buildStatCard('Ahorros', '\$${user.totalSavings}', Icons.savings),
-        const SizedBox(width: 12),
-        _buildStatCard('Puntos', user.availablePoints.toString(), Icons.stars),
+        Row(
+          children: [
+            _buildStatCard('Cupones', user.totalCouponsRedeemed.toString(), Icons.confirmation_num),
+            const SizedBox(width: 12),
+            _buildStatCard('Ahorros', '\$${user.totalSavings}', Icons.savings),
+            const SizedBox(width: 12),
+            _buildStatCard('Puntos', user.availablePoints.toString(), Icons.stars),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _buildStatCard('Seguidos', user.followingCommerceIds.length.toString(), Icons.storefront_outlined),
+            const SizedBox(width: 12),
+            _buildStatCard('Favoritos', user.favoriteCommerceIds.length.toString(), Icons.favorite_outline),
+            const SizedBox(width: 12),
+            _buildStatCard('Categorías', user.followingCategories.length.toString(), Icons.category_outlined),
+          ],
+        ),
       ],
     ).animate().fadeIn(delay: 200.ms);
   }

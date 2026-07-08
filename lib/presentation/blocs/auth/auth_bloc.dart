@@ -62,8 +62,9 @@ class UpdateProfileEvent extends AuthEvent {
   final String? displayName;
   final String? photoUrl;
   final String? phoneNumber;
+  final String? bio;
 
-  UpdateProfileEvent({this.displayName, this.photoUrl, this.phoneNumber});
+  UpdateProfileEvent({this.displayName, this.photoUrl, this.phoneNumber, this.bio});
 }
 
 class UpdateSettingsEvent extends AuthEvent {
@@ -252,6 +253,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       displayName: event.displayName,
       photoUrl: event.photoUrl,
       phoneNumber: event.phoneNumber,
+      bio: event.bio,
     );
     result.fold(
       (failure) => emit(AuthError(failure.message)),

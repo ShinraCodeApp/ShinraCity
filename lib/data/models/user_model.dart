@@ -31,6 +31,7 @@ class UserModel extends UserEntity {
     super.lastActiveAt,
     super.referralCode,
     super.referredBy,
+    super.bio,
   });
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -82,6 +83,7 @@ class UserModel extends UserEntity {
       lastActiveAt: (map['lastActiveAt'] as Timestamp?)?.toDate(),
       referralCode: map['referralCode'],
       referredBy: map['referredBy'],
+      bio: map['bio'],
     );
   }
 
@@ -115,6 +117,7 @@ class UserModel extends UserEntity {
       'lastActiveAt': lastActiveAt != null ? Timestamp.fromDate(lastActiveAt!) : null,
       'referralCode': referralCode,
       'referredBy': referredBy,
+      'bio': bio,
       'updatedAt': FieldValue.serverTimestamp(),
     };
   }

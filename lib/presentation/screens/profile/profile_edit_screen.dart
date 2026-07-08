@@ -23,6 +23,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
+  late final TextEditingController _bioController;
 
   File? _avatarFile;
   bool _saving = false;
@@ -34,12 +35,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final user = _currentUser;
     _nameController = TextEditingController(text: user?.displayName ?? '');
     _phoneController = TextEditingController(text: user?.phoneNumber ?? '');
+    _bioController = TextEditingController(text: user?.bio ?? '');
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _bioController.dispose();
     super.dispose();
   }
 
@@ -123,6 +126,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 label: 'Teléfono (opcional)',
                 prefixIcon: Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
+              ShinraTextField(
+                controller: _bioController,
+                label: 'Sobre mí (opcional)',
+                prefixIcon: Icons.notes_outlined,
+                maxLines: 3,
+                hint: 'Contá algo sobre vos...',
               ),
             ]),
             const SizedBox(height: 20),
@@ -456,6 +467,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 ? null
                 : _phoneController.text.trim(),
             photoUrl: newPhotoUrl,
+            bio: _bioController.text.trim().isEmpty
+                ? null
+                : _bioController.text.trim(),
           ),
         );
   }
