@@ -124,20 +124,20 @@ class FirebasePromotionDatasource {
     }
 
     final allPromotions = <PromotionModel>[];
+    final now = Timestamp.now();
     for (final batch in batches) {
-      Query query = _firestore
+      // Avoid combining whereIn + range + equality (needs multi-field index).
+      // Filter status in Dart after fetching.
+      final snapshot = await _firestore
           .collection(AppConstants.promotionsCollection)
           .where('commerceId', whereIn: batch)
-          .where('endDate', isGreaterThan: Timestamp.now());
-
-      if (onlyActive) {
-        query = query.where('status', isEqualTo: PromotionStatus.active.name);
-      }
-
-      final snapshot = await query.limit(limit).get();
-      allPromotions.addAll(
-        snapshot.docs.map((d) => PromotionModel.fromFirestore(d)),
-      );
+          .where('endDate', isGreaterThan: now)
+          .limit(limit)
+          .get();
+      final filtered = snapshot.docs
+          .map((d) => PromotionModel.fromFirestore(d))
+          .where((p) => !onlyActive || p.status == PromotionStatus.active);
+      allPromotions.addAll(filtered);
     }
 
     // Sort by featured commerce plan (premium first), then by recency
@@ -151,18 +151,22 @@ class FirebasePromotionDatasource {
     PromotionStatus? status,
     int limit = 20,
   }) async {
+    // orderBy+where combo requires composite index; filter/sort in Dart instead
     Query query = _firestore
         .collection(AppConstants.promotionsCollection)
         .where('commerceId', isEqualTo: commerceId)
-        .orderBy('createdAt', descending: true)
-        .limit(limit);
+        .limit(limit * 3);
 
     if (status != null) {
       query = query.where('status', isEqualTo: status.name);
     }
 
     final snapshot = await query.get();
-    return snapshot.docs.map((d) => PromotionModel.fromFirestore(d)).toList();
+    final list = snapshot.docs
+        .map((d) => PromotionModel.fromFirestore(d))
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return list.take(limit).toList();
   }
 
   Future<List<PromotionModel>> getFeaturedPromotions({int limit = 10}) async {
@@ -209,6 +213,7 @@ class FirebasePromotionDatasource {
   }
 
   Stream<List<PromotionModel>> watchCommercePromotions(String commerceId) {
+    // orderBy on top of whereIn needs composite index; sort in Dart instead
     return _firestore
         .collection(AppConstants.promotionsCollection)
         .where('commerceId', isEqualTo: commerceId)
@@ -216,9 +221,12 @@ class FirebasePromotionDatasource {
           PromotionStatus.active.name,
           PromotionStatus.scheduled.name,
         ])
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => PromotionModel.fromFirestore(d)).toList());
+        .map((s) {
+          final list = s.docs.map((d) => PromotionModel.fromFirestore(d)).toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return list;
+        });
   }
 
   // Auto-expire promotions (called from scheduled function)

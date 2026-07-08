@@ -1069,7 +1069,9 @@ async function savePromo(bizId) {
       await db.collection('promotions').doc(_editingPromoId).update(data);
     } else {
       data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-      data.commerceName = ''; data.commerceLogoUrl = null;
+      const biz = allBiz.find(b => b.id === bizId);
+      data.commerceName = biz?.name || '';
+      data.commerceLogoUrl = biz?.logoUrl || null;
       data.originalPrice = 0; data.discountedPrice = null;
       data.isExclusiveForFollowers = false; data.isVip = false;
       data.requiresCode = !!data.promoCode; data.perUserLimit = 1;
@@ -1077,6 +1079,11 @@ async function savePromo(bizId) {
       data.categories = []; data.imageUrls = [];
       data.claimCount = 0; data.viewCount = 0; data.savedAmount = 0;
       await db.collection('promotions').add(data);
+      // Actualizar el marcador del mapa (golden glow)
+      await db.collection('commerces').doc(bizId).update({
+        activePromotionsCount: firebase.firestore.FieldValue.increment(1),
+        hasActivePromotion: true,
+      });
     }
     document.getElementById('promo-form-overlay').remove();
     loadBizPromos(bizId);
@@ -1088,8 +1095,17 @@ async function savePromo(bizId) {
 
 async function deletePromo(id) {
   if (!confirm('¿Eliminar esta promoción?')) return;
+  const promoDoc = await db.collection('promotions').doc(id).get();
+  const wasActive = promoDoc.data()?.status === 'active' || promoDoc.data()?.isActive === true;
   await db.collection('promotions').doc(id).delete();
   const bizId = document.getElementById('ebiz-id').value;
+  if (wasActive) {
+    const remaining = await db.collection('promotions').where('commerceId','==',bizId).where('status','==','active').get();
+    await db.collection('commerces').doc(bizId).update({
+      activePromotionsCount: Math.max(0, remaining.size - 1),
+      hasActivePromotion: remaining.size > 1,
+    });
+  }
   loadBizPromos(bizId);
   showToast('Promoción eliminada');
 }
