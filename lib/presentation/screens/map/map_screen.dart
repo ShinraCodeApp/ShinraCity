@@ -1,4 +1,6 @@
-﻿import 'package:cloud_functions/cloud_functions.dart';
+﻿import 'dart:async';
+import 'dart:math' show pi;
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -6,7 +8,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get_it/get_it.dart';
 import 'package:latlong2/latlong.dart';
-import 'dart:async';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../domain/entities/commerce_entity.dart';
@@ -401,74 +402,97 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Aro exterior si tiene promoción activa
-              if (hasPromo)
+              // Ambulant: always-pulsing outer ring
+              if (isAmbulant)
+                AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (_, __) => Container(
+                    width: size + 14 + (_pulseController.value * 10),
+                    height: size + 14 + (_pulseController.value * 10),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFFF9800)
+                            .withValues(alpha: (1 - _pulseController.value) * 0.75),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              // Fixed business with active promo: golden glow ring
+              if (hasPromo && !isAmbulant)
                 Container(
                   width: size,
                   height: size,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.8),
+                      color: AppColors.primary.withValues(alpha: 0.85),
                       width: 2.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.4),
+                        color: AppColors.primary.withValues(alpha: 0.45),
                         blurRadius: 10,
                         spreadRadius: 3,
                       ),
                     ],
                   ),
                 ),
-              // Ambulant pulsing ring
-              if (isAmbulant && commerce.liveLocation != null)
-                AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (_, __) => Container(
-                    width: size + 10 + (_pulseController.value * 8),
-                    height: size + 10 + (_pulseController.value * 8),
+              // AMBULANT: diamond (rotated square) background
+              if (isAmbulant)
+                Transform.rotate(
+                  angle: pi / 4,
+                  child: Container(
+                    width: size - 10,
+                    height: size - 10,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
+                      color: const Color(0xFFFF9800).withValues(alpha: opacity),
+                      borderRadius: BorderRadius.circular(5),
                       border: Border.all(
-                        color: Colors.orangeAccent.withValues(
-                            alpha: (1 - _pulseController.value) * 0.7),
-                        width: 2,
+                        color: Colors.white.withValues(alpha: isOpen ? 0.8 : 0.35),
+                        width: 1.5,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF9800).withValues(alpha: 0.5),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              // Círculo de categoría
-              Container(
-                width: size - (hasPromo ? 8 : 0),
-                height: size - (hasPromo ? 8 : 0),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isAmbulant
-                      ? Colors.orange.withValues(alpha: opacity)
-                      : baseColor.withValues(alpha: opacity),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: isOpen ? 0.6 : 0.3),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isAmbulant ? Colors.orange : baseColor)
-                          .withValues(alpha: 0.4),
-                      blurRadius: 6,
-                      spreadRadius: 1,
+              // FIXED BUSINESS: circle with category color
+              if (!isAmbulant)
+                Container(
+                  width: size - (hasPromo ? 8 : 0),
+                  height: size - (hasPromo ? 8 : 0),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: baseColor.withValues(alpha: opacity),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: isOpen ? 0.65 : 0.3),
+                      width: 1.5,
                     ),
-                  ],
-                ),
-                child: hasPromo
-                    ? const Icon(Icons.local_offer, color: Colors.white, size: 16)
-                    : Icon(
-                        isAmbulant
-                            ? Icons.directions_walk
-                            : _getCategoryIcon(commerce.category),
-                        color: Colors.white.withValues(alpha: isOpen ? 0.9 : 0.5),
-                        size: 14,
+                    boxShadow: [
+                      BoxShadow(
+                        color: baseColor.withValues(alpha: 0.4),
+                        blurRadius: 6,
+                        spreadRadius: 1,
                       ),
+                    ],
+                  ),
+                ),
+              // Icon — always upright regardless of shape rotation
+              Icon(
+                isAmbulant
+                    ? Icons.directions_walk
+                    : (hasPromo
+                        ? Icons.local_offer
+                        : _getCategoryIcon(commerce.category)),
+                color: Colors.white.withValues(alpha: isOpen ? 0.92 : 0.5),
+                size: isAmbulant ? 15 : 14,
               ),
             ],
           ),
