@@ -947,27 +947,37 @@ async function loadBizPromos(bizId) {
   const list = document.getElementById('promos-list');
   const count = document.getElementById('promos-count');
   list.innerHTML = '<p style="color:var(--text-sec);text-align:center;padding:20px;font-size:13px">Cargando...</p>';
-  const snap = await db.collection('promotions').where('commerceId','==',bizId).orderBy('startDate','desc').limit(20).get();
-  count.textContent = `${snap.size} promoción${snap.size !== 1 ? 'es' : ''}`;
-  if (snap.empty) { list.innerHTML = '<p style="color:var(--text-sec);text-align:center;padding:20px;font-size:13px">Sin promociones aún</p>'; return; }
-  list.innerHTML = snap.docs.map(doc => {
-    const p = doc.data();
-    const end = p.endDate?.toDate ? p.endDate.toDate().toLocaleDateString('es-AR') : '—';
-    const active = p.isActive !== false;
-    return `<div style="background:var(--bg-surface);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title || 'Sin título'}</div>
-        <div style="font-size:11px;color:var(--text-sec);margin-top:2px">${p.type || ''} · Vence: ${end} · ${p.usedSlots||0}/${p.totalSlots||'∞'} cupos</div>
-      </div>
-      <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${active?'#10B98122':'#EF444422'};color:${active?'var(--success)':'var(--error)'}">
-        ${active ? 'Activa' : 'Inactiva'}
-      </span>
-      <div style="display:flex;gap:6px">
-        <button onclick="editPromo('${doc.id}')" style="padding:5px 10px;background:var(--bg-hover);border:none;border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">✏️</button>
-        <button onclick="deletePromo('${doc.id}')" style="padding:5px 10px;background:rgba(239,68,68,.15);border:none;border-radius:6px;color:var(--error);font-size:11px;cursor:pointer">🗑️</button>
-      </div>
-    </div>`;
-  }).join('');
+  try {
+    // No orderBy para evitar requerir índice compuesto; ordenamos en JS
+    const snap = await db.collection('promotions').where('commerceId','==',bizId).limit(50).get();
+    const docs = snap.docs.slice().sort((a, b) => {
+      const aS = a.data().startDate?.seconds || a.data().createdAt?.seconds || 0;
+      const bS = b.data().startDate?.seconds || b.data().createdAt?.seconds || 0;
+      return bS - aS;
+    });
+    count.textContent = `${docs.length} promoción${docs.length !== 1 ? 'es' : ''}`;
+    if (!docs.length) { list.innerHTML = '<p style="color:var(--text-sec);text-align:center;padding:20px;font-size:13px">Sin promociones aún</p>'; return; }
+    list.innerHTML = docs.map(doc => {
+      const p = doc.data();
+      const end = p.endDate?.toDate ? p.endDate.toDate().toLocaleDateString('es-AR') : '—';
+      const active = p.status === 'active' || p.isActive === true;
+      return `<div style="background:var(--bg-surface);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title || 'Sin título'}</div>
+          <div style="font-size:11px;color:var(--text-sec);margin-top:2px">${p.type || ''} · Vence: ${end} · ${p.usedSlots||0}/${p.totalSlots||'∞'} cupos</div>
+        </div>
+        <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${active?'#10B98122':'#EF444422'};color:${active?'var(--success)':'var(--error)'}">
+          ${active ? 'Activa' : 'Inactiva'}
+        </span>
+        <div style="display:flex;gap:6px">
+          <button onclick="editPromo('${doc.id}')" style="padding:5px 10px;background:var(--bg-hover);border:none;border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">✏️</button>
+          <button onclick="deletePromo('${doc.id}')" style="padding:5px 10px;background:rgba(239,68,68,.15);border:none;border-radius:6px;color:var(--error);font-size:11px;cursor:pointer">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = `<p style="color:var(--error);text-align:center;padding:20px;font-size:13px">Error al cargar: ${e.message}</p>`;
+  }
 }
 
 function openCreatePromo() {
@@ -1001,10 +1011,13 @@ function showPromoForm(p) {
           <div><label style="font-size:11px;color:var(--text-sec);display:block;margin-bottom:4px">Tipo</label>
             <select id="pf-type" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:7px;padding:9px 10px;color:var(--text);font-size:12px;outline:none">
               <option value="discount" ${p.type==='discount'?'selected':''}>Descuento %</option>
-              <option value="fixed_discount" ${p.type==='fixed_discount'?'selected':''}>Descuento $</option>
-              <option value="buy_x_get_y" ${p.type==='buy_x_get_y'?'selected':''}>2x1 / NxM</option>
-              <option value="gift" ${p.type==='gift'?'selected':''}>Regalo</option>
-              <option value="special_price" ${p.type==='special_price'?'selected':''}>Precio especial</option>
+              <option value="cashback" ${p.type==='cashback'?'selected':''}>Descuento $</option>
+              <option value="twoForOne" ${p.type==='twoForOne'?'selected':''}>2x1</option>
+              <option value="freeItem" ${p.type==='freeItem'?'selected':''}>Regalo</option>
+              <option value="happyHour" ${p.type==='happyHour'?'selected':''}>Happy Hour</option>
+              <option value="combo" ${p.type==='combo'?'selected':''}>Combo</option>
+              <option value="event" ${p.type==='event'?'selected':''}>Evento</option>
+              <option value="fidelity" ${p.type==='fidelity'?'selected':''}>Fidelidad</option>
             </select></div>
           ${field('pf-discount','Descuento (%)','number',p.discountValue||'')}
         </div>
@@ -1046,22 +1059,31 @@ async function savePromo(bizId) {
     pointsAwarded: parseInt(document.getElementById('pf-points').value) || 50,
     conditions: document.getElementById('pf-conditions').value.trim() || null,
     promoCode: document.getElementById('pf-code').value.trim() || null,
-    isActive: true,
+    status: 'active',
     usedSlots: _editingPromoId ? undefined : 0,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
   };
   if (!data.title) { alert('El título es obligatorio'); return; }
-  if (_editingPromoId) {
-    await db.collection('promotions').doc(_editingPromoId).update(data);
-  } else {
-    data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-    data.originalPrice = 0; data.isExclusiveForFollowers = false; data.isVip = false;
-    data.requiresCode = !!data.promoCode; data.perUserLimit = 1;
-    await db.collection('promotions').add(data);
+  try {
+    if (_editingPromoId) {
+      await db.collection('promotions').doc(_editingPromoId).update(data);
+    } else {
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      data.commerceName = ''; data.commerceLogoUrl = null;
+      data.originalPrice = 0; data.discountedPrice = null;
+      data.isExclusiveForFollowers = false; data.isVip = false;
+      data.requiresCode = !!data.promoCode; data.perUserLimit = 1;
+      data.isGeolocated = false; data.geoLocation = null; data.geoRadius = null;
+      data.categories = []; data.imageUrls = [];
+      data.claimCount = 0; data.viewCount = 0; data.savedAmount = 0;
+      await db.collection('promotions').add(data);
+    }
+    document.getElementById('promo-form-overlay').remove();
+    loadBizPromos(bizId);
+    showToast(_editingPromoId ? 'Promoción actualizada' : 'Promoción creada', 'success');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
   }
-  document.getElementById('promo-form-overlay').remove();
-  loadBizPromos(bizId);
-  showToast(_editingPromoId ? 'Promoción actualizada' : 'Promoción creada', 'success');
 }
 
 async function deletePromo(id) {
