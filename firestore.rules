@@ -37,7 +37,7 @@ service cloud.firestore {
     // Commerces
     match /commerces/{commerceId} {
       allow read: if true;
-      allow create: if isBusinessOwner();
+      allow create: if isAuthenticated();
       allow update: if ownsCommerce(commerceId) || isAdmin();
       allow delete: if isAdmin();
     }
@@ -45,7 +45,7 @@ service cloud.firestore {
     // Promotions
     match /promotions/{promotionId} {
       allow read: if true;
-      allow create: if isBusinessOwner();
+      allow create: if isBusinessOwner() || ownsCommerce(request.resource.data.commerceId);
       allow update: if ownsCommerce(resource.data.commerceId) || isAdmin();
       allow delete: if isAdmin();
     }

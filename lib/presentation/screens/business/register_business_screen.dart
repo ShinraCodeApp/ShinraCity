@@ -331,6 +331,13 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
             .collection(AppConstants.commercesCollection)
             .doc(docId)
             .set(data);
+        // Promote user to businessOwner so Firestore rules allow promotion creation
+        if (!isAdmin) {
+          await _db
+              .collection(AppConstants.usersCollection)
+              .doc(uid)
+              .update({'role': 'businessOwner'});
+        }
       } else {
         await _db
             .collection(AppConstants.commercesCollection)
