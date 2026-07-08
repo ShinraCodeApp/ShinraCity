@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -24,6 +25,7 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _loading = false;
   String _error = '';
   CommerceCategory? _selectedCategory;
+  Timer? _debounce;
 
   static const _categories = CommerceCategory.values;
 
@@ -37,9 +39,15 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () => _search(query));
   }
 
   Future<void> _search(String query) async {
@@ -137,7 +145,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
                 ),
-                onChanged: _search,
+                onChanged: _onSearchChanged,
               ),
             ),
           ),

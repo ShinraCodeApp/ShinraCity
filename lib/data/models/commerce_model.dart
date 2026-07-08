@@ -32,6 +32,9 @@ class CommerceModel extends CommerceEntity {
     super.hasActivePromotion,
     super.isVerified,
     super.isFeatured,
+    super.isAmbulant,
+    super.liveLocation,
+    super.liveLocationUpdatedAt,
     super.tags,
     super.pointsConfig,
     super.authorizedEmployeeIds,
@@ -105,6 +108,13 @@ class CommerceModel extends CommerceEntity {
       hasActivePromotion: map['hasActivePromotion'] ?? false,
       isVerified: map['isVerified'] ?? false,
       isFeatured: map['isFeatured'] ?? false,
+      isAmbulant: map['isAmbulant'] ?? false,
+      liveLocation: map['liveLocation'] != null
+          ? LatLng((map['liveLocation'] as GeoPoint).latitude,
+              (map['liveLocation'] as GeoPoint).longitude)
+          : null,
+      liveLocationUpdatedAt:
+          (map['liveLocationUpdatedAt'] as Timestamp?)?.toDate(),
       tags: List<String>.from(map['tags'] ?? []),
       pointsConfig: Map<String, dynamic>.from(map['pointsConfig'] ?? {}),
       authorizedEmployeeIds: List<String>.from(map['authorizedEmployeeIds'] ?? []),
@@ -154,6 +164,11 @@ class CommerceModel extends CommerceEntity {
       'hasActivePromotion': hasActivePromotion,
       'isVerified': isVerified,
       'isFeatured': isFeatured,
+      'isAmbulant': isAmbulant,
+      if (liveLocation != null)
+        'liveLocation': GeoPoint(liveLocation!.latitude, liveLocation!.longitude),
+      if (liveLocationUpdatedAt != null)
+        'liveLocationUpdatedAt': Timestamp.fromDate(liveLocationUpdatedAt!),
       'tags': tags,
       'pointsConfig': pointsConfig,
       'authorizedEmployeeIds': authorizedEmployeeIds,

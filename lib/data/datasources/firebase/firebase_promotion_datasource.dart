@@ -44,7 +44,7 @@ class FirebasePromotionDatasource {
         .collection(AppConstants.promotionsCollection)
         .doc(id)
         .get();
-    if (!doc.exists) throw Exception('PromociÃ³n no encontrada');
+    if (!doc.exists) throw Exception('Promoción no encontrada');
     return PromotionModel.fromFirestore(doc);
   }
 

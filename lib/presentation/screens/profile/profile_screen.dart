@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:step_progress_indicator/step_progress_indicator.dart';
@@ -284,44 +285,77 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildAchievementsSection(UserEntity user) {
     if (user.achievementIds.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Logros recientes',
-          style: AppTextStyles.titleLarge.copyWith(color: Colors.white),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 64,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: user.achievementIds.take(5).length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              return _buildAchievementBadge(user.achievementIds[index]);
-            },
-          ),
-        ),
-      ],
-    ).animate().fadeIn(delay: 300.ms);
+    final ids = user.achievementIds.take(5).toList();
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: Future.wait(ids.map((id) async {
+        final doc = await FirebaseFirestore.instance
+            .collection('achievements')
+            .doc(id)
+            .get();
+        return {'id': id, ...?doc.data()};
+      })),
+      builder: (context, snap) {
+        final achievements = snap.data ?? ids.map((id) => {'id': id}).toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Logros recientes',
+                style: AppTextStyles.titleLarge.copyWith(color: Colors.white)),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 80,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: achievements.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, i) => _buildAchievementBadge(achievements[i]),
+              ),
+            ),
+          ],
+        ).animate().fadeIn(delay: 300.ms);
+      },
+    );
   }
 
-  Widget _buildAchievementBadge(String achievementId) {
-    return Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        gradient: AppColors.goldGradient,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accent.withValues(alpha: 0.3),
-            blurRadius: 8,
+  Widget _buildAchievementBadge(Map<String, dynamic> data) {
+    final title = data['title'] as String? ?? '';
+    final rarityStr = data['rarity'] as String? ?? 'common';
+    final Color rarityColor = switch (rarityStr) {
+      'legendary' => const Color(0xFFFF6B35),
+      'epic'      => const Color(0xFF9B59B6),
+      'rare'      => const Color(0xFF3498DB),
+      'uncommon'  => const Color(0xFF2ECC71),
+      _           => AppColors.accent,
+    };
+
+    return Tooltip(
+      message: title,
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: rarityColor.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+              border: Border.all(color: rarityColor, width: 2),
+              boxShadow: [BoxShadow(color: rarityColor.withValues(alpha: 0.3), blurRadius: 8)],
+            ),
+            child: Icon(Icons.emoji_events, color: rarityColor, size: 28),
           ),
+          if (title.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            SizedBox(
+              width: 56,
+              child: Text(title,
+                  style: AppTextStyles.labelSmall.copyWith(color: Colors.white70, fontSize: 9),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center),
+            ),
+          ],
         ],
       ),
-      child: const Icon(Icons.emoji_events, color: Colors.white, size: 32),
     );
   }
 
@@ -663,11 +697,14 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          'ShinraCity v1.0.0',
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textSecondaryDark.withValues(alpha: 0.5),
-            fontSize: 11,
+        FutureBuilder<PackageInfo>(
+          future: PackageInfo.fromPlatform(),
+          builder: (_, snap) => Text(
+            'ShinraCity v${snap.data?.version ?? '—'}',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondaryDark.withValues(alpha: 0.5),
+              fontSize: 11,
+            ),
           ),
         ),
       ],

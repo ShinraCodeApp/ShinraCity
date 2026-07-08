@@ -84,6 +84,9 @@ class CommerceEntity extends Equatable {
   final bool hasActivePromotion;
   final bool isVerified;
   final bool isFeatured;
+  final bool isAmbulant;
+  final LatLng? liveLocation;
+  final DateTime? liveLocationUpdatedAt;
   final List<String> tags;
   final Map<String, dynamic> pointsConfig;
   final List<String> authorizedEmployeeIds;
@@ -121,6 +124,9 @@ class CommerceEntity extends Equatable {
     this.hasActivePromotion = false,
     this.isVerified = false,
     this.isFeatured = false,
+    this.isAmbulant = false,
+    this.liveLocation,
+    this.liveLocationUpdatedAt,
     this.tags = const [],
     this.pointsConfig = const {},
     this.authorizedEmployeeIds = const [],
@@ -163,7 +169,7 @@ class CommerceEntity extends Equatable {
   String get planDisplayName {
     switch (plan) {
       case CommercePlan.free: return 'Gratuito';
-      case CommercePlan.basic: return 'BÃ¡sico';
+      case CommercePlan.basic: return 'Básico';
       case CommercePlan.premium: return 'Premium';
       case CommercePlan.enterprise: return 'Empresarial';
     }
@@ -202,6 +208,9 @@ class CommerceEntity extends Equatable {
     bool? hasActivePromotion,
     bool? isVerified,
     bool? isFeatured,
+    bool? isAmbulant,
+    LatLng? liveLocation,
+    DateTime? liveLocationUpdatedAt,
     List<String>? tags,
     Map<String, dynamic>? pointsConfig,
   }) {
@@ -234,6 +243,9 @@ class CommerceEntity extends Equatable {
       hasActivePromotion: hasActivePromotion ?? this.hasActivePromotion,
       isVerified: isVerified ?? this.isVerified,
       isFeatured: isFeatured ?? this.isFeatured,
+      isAmbulant: isAmbulant ?? this.isAmbulant,
+      liveLocation: liveLocation ?? this.liveLocation,
+      liveLocationUpdatedAt: liveLocationUpdatedAt ?? this.liveLocationUpdatedAt,
       tags: tags ?? this.tags,
       pointsConfig: pointsConfig ?? this.pointsConfig,
       authorizedEmployeeIds: authorizedEmployeeIds,
@@ -245,5 +257,5 @@ class CommerceEntity extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, status, plan, location];
+  List<Object?> get props => [id, name, status, plan, location, isAmbulant, liveLocation];
 }

@@ -33,9 +33,9 @@ class _PlanUpgradeScreenState extends State<PlanUpgradeScreen> {
 
   // Default prices (used when Firestore not yet configured)
   static const _defaultPrices = {
-    CommercePlan.basic: {'monthly': 2990, 'annual': 2392},
-    CommercePlan.premium: {'monthly': 5990, 'annual': 4792},
-    CommercePlan.enterprise: {'monthly': 14990, 'annual': 11992},
+    CommercePlan.basic: {'monthly': 9990, 'annual': 7992},
+    CommercePlan.premium: {'monthly': 19990, 'annual': 15992},
+    CommercePlan.enterprise: {'monthly': 39990, 'annual': 31992},
   };
 
   Map<CommercePlan, Map<String, int>> _prices = _defaultPrices;
@@ -57,45 +57,54 @@ class _PlanUpgradeScreenState extends State<PlanUpgradeScreen> {
       setState(() {
         _prices = {
           CommercePlan.basic: {
-            'monthly': (data['basic']?['monthly'] as num?)?.toInt() ?? 2990,
-            'annual': (data['basic']?['annual'] as num?)?.toInt() ?? 2392,
+            'monthly': (data['basic']?['monthly'] as num?)?.toInt() ?? 9990,
+            'annual': (data['basic']?['annual'] as num?)?.toInt() ?? 7992,
           },
           CommercePlan.premium: {
-            'monthly': (data['premium']?['monthly'] as num?)?.toInt() ?? 5990,
-            'annual': (data['premium']?['annual'] as num?)?.toInt() ?? 4792,
+            'monthly': (data['premium']?['monthly'] as num?)?.toInt() ?? 19990,
+            'annual': (data['premium']?['annual'] as num?)?.toInt() ?? 15992,
           },
           CommercePlan.enterprise: {
-            'monthly': (data['enterprise']?['monthly'] as num?)?.toInt() ?? 14990,
-            'annual': (data['enterprise']?['annual'] as num?)?.toInt() ?? 11992,
+            'monthly': (data['enterprise']?['monthly'] as num?)?.toInt() ?? 39990,
+            'annual': (data['enterprise']?['annual'] as num?)?.toInt() ?? 31992,
           },
         };
       });
     } catch (_) {}
   }
 
+  static const _planSubtitle = {
+    CommercePlan.basic:      'Para emprendedores y negocios nuevos',
+    CommercePlan.premium:    'Para negocios que quieren crecer rápido',
+    CommercePlan.enterprise: 'Para cadenas y comercios establecidos',
+  };
+
   static const _features = {
     CommercePlan.basic: [
-      'Hasta 10 promociones activas',
-      'Notificaciones a seguidores',
-      'Estadísticas básicas',
-      'Badge de negocio verificado',
+      'Hasta 10 promociones activas simultáneas',
+      'Cupones QR ilimitados para tus clientes',
+      'Notificaciones automáticas a seguidores',
+      'Galería de hasta 5 fotos del negocio',
+      'Estadísticas de cupones y seguidores',
+      'Badge ✅ de negocio verificado en el mapa',
     ],
     CommercePlan.premium: [
-      'Promociones ilimitadas',
-      'Campañas de geofencing',
-      'Analytics avanzados',
-      'Soporte prioritario',
-      'Galería de imágenes (20 fotos)',
-      'Publicidad en mapa destacada',
+      'Promociones ilimitadas sin restricciones',
+      '⭐ Visibilidad destacada en el mapa',
+      'Notificaciones por geofencing (por cercanía)',
+      'Galería de hasta 20 fotos del negocio',
+      'Analytics avanzados con gráficos detallados',
+      'Sugerencias de campaña con inteligencia artificial',
+      'Soporte prioritario vía WhatsApp',
     ],
     CommercePlan.enterprise: [
-      'Todo lo de Premium',
-      'Múltiples sucursales',
-      'API de integración',
+      'Todo lo incluido en Premium',
+      'Múltiples sucursales en un solo panel',
       'Manager de cuenta dedicado',
-      'Campañas de IA personalizadas',
-      'Exportación de datos',
-      'Acceso anticipado a funciones',
+      'Exportación de datos y reportes en PDF',
+      'Integración vía API con tu sistema propio',
+      'Acceso anticipado a nuevas funciones',
+      'Sesión de estrategia mensual incluida',
     ],
   };
 
@@ -283,7 +292,14 @@ class _PlanUpgradeScreenState extends State<PlanUpgradeScreen> {
                           ],
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
+                      Text(
+                        _planSubtitle[plan]!,
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.textSecondaryDark,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [

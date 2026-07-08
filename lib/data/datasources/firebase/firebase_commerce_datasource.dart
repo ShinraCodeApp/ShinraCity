@@ -260,7 +260,7 @@ class FirebaseCommerceDatasource {
               ? data['usedAt'] as Timestamp?
               : data['createdAt'] as Timestamp?;
           return {
-            'title': isUsed ? 'CupÃ³n canjeado' : 'CupÃ³n reclamado',
+            'title': isUsed ? 'Cupón canjeado' : 'Cupón reclamado',
             'time': ts != null ? _timeAgo(ts.toDate()) : '',
             'isUsed': isUsed,
           };
@@ -274,6 +274,6 @@ class FirebaseCommerceDatasource {
     if (diff.inMinutes < 1) return 'Ahora';
     if (diff.inMinutes < 60) return 'Hace ${diff.inMinutes} min';
     if (diff.inHours < 24) return 'Hace ${diff.inHours} h';
-    return 'Hace ${diff.inDays} dÃ­a${diff.inDays > 1 ? "s" : ""}';
+    return 'Hace ${diff.inDays} día${diff.inDays > 1 ? "s" : ""}';
   }
 }

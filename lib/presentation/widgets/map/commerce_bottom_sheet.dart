@@ -197,7 +197,7 @@ class CommerceBottomSheet extends StatelessWidget {
         _buildStatItem(
           icon: Icons.star,
           value: commerce.rating.toStringAsFixed(1),
-          label: '${commerce.reviewCount} reseÃ±as',
+          label: '${commerce.reviewCount} reseñas',
           color: AppColors.accent,
         ),
         const SizedBox(width: 16),
@@ -275,7 +275,7 @@ class CommerceBottomSheet extends StatelessWidget {
                   style: AppTextStyles.titleMedium.copyWith(color: Colors.white),
                 ),
                 Text(
-                  'VisitÃ¡ el local y reclamÃ¡ tu cupÃ³n',
+                  'Visitá el local y reclamá tu cupón',
                   style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
                 ),
               ],

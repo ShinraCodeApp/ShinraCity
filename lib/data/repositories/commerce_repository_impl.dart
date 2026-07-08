@@ -7,6 +7,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/errors/failures.dart';
 import '../../core/utils/geo_utils.dart';
 import '../../domain/entities/commerce_entity.dart';
+import '../../domain/entities/review_entity.dart';
 import '../../domain/repositories/commerce_repository.dart';
 import '../datasources/firebase/firebase_commerce_datasource.dart';
 import '../models/commerce_model.dart';
@@ -14,12 +15,15 @@ import '../models/commerce_model.dart';
 class CommerceRepositoryImpl implements CommerceRepository {
   final FirebaseCommerceDatasource _datasource;
   final FirebaseAuth _auth;
+  final FirebaseFirestore _db;
 
   CommerceRepositoryImpl({
     required FirebaseCommerceDatasource datasource,
     required FirebaseAuth auth,
+    FirebaseFirestore? firestore,
   })  : _datasource = datasource,
-        _auth = auth;
+        _auth = auth,
+        _db = firestore ?? FirebaseFirestore.instance;
 
   @override
   Future<Either<Failure, CommerceEntity>> createCommerce(CommerceEntity commerce) async {
@@ -200,7 +204,7 @@ class CommerceRepositoryImpl implements CommerceRepository {
   @override
   Future<Either<Failure, List<CommerceEntity>>> getUserFavorites(String userId) async {
     try {
-      final userDoc = await FirebaseFirestore.instance
+      final userDoc = await _db
           .collection('users')
           .doc(userId)
           .get();
@@ -219,7 +223,7 @@ class CommerceRepositoryImpl implements CommerceRepository {
   @override
   Future<Either<Failure, List<CommerceEntity>>> getUserFollowing(String userId) async {
     try {
-      final userDoc = await FirebaseFirestore.instance
+      final userDoc = await _db
           .collection('users')
           .doc(userId)
           .get();
@@ -241,7 +245,7 @@ class CommerceRepositoryImpl implements CommerceRepository {
     required String commerceId,
   }) async {
     try {
-      final doc = await FirebaseFirestore.instance
+      final doc = await _db
           .collection('users')
           .doc(userId)
           .get();
@@ -259,7 +263,7 @@ class CommerceRepositoryImpl implements CommerceRepository {
     required String commerceId,
   }) async {
     try {
-      final doc = await FirebaseFirestore.instance
+      final doc = await _db
           .collection('users')
           .doc(userId)
           .get();
@@ -277,7 +281,7 @@ class CommerceRepositoryImpl implements CommerceRepository {
     required String commerceId,
   }) async {
     try {
-      final userRef = FirebaseFirestore.instance.collection('users').doc(userId);
+      final userRef = _db.collection('users').doc(userId);
       final userDoc = await userRef.get();
       final favorites = List<String>.from(userDoc.data()?['favoriteCommerceIds'] ?? []);
 
@@ -302,10 +306,10 @@ class CommerceRepositoryImpl implements CommerceRepository {
     required String commerceId,
   }) async {
     try {
-      final userRef = FirebaseFirestore.instance.collection('users').doc(userId);
+      final userRef = _db.collection('users').doc(userId);
       final userDoc = await userRef.get();
       final following = List<String>.from(userDoc.data()?['followingCommerceIds'] ?? []);
-      final commerceRef = FirebaseFirestore.instance.collection('commerces').doc(commerceId);
+      final commerceRef = _db.collection('commerces').doc(commerceId);
 
       if (following.contains(commerceId)) {
         await Future.wait([
@@ -334,7 +338,7 @@ class CommerceRepositoryImpl implements CommerceRepository {
         commerceId: commerceId,
         filePath: filePath,
       );
-      await FirebaseFirestore.instance
+      await _db
           .collection('commerces')
           .doc(commerceId)
           .update({'logoUrl': url});
@@ -354,7 +358,7 @@ class CommerceRepositoryImpl implements CommerceRepository {
         commerceId: commerceId,
         filePath: filePath,
       );
-      await FirebaseFirestore.instance.collection('commerces').doc(commerceId).update({
+      await _db.collection('commerces').doc(commerceId).update({
         'galleryUrls': FieldValue.arrayUnion([url]),
       });
       return Right(url);
@@ -369,7 +373,7 @@ class CommerceRepositoryImpl implements CommerceRepository {
     required String imageUrl,
   }) async {
     try {
-      await FirebaseFirestore.instance.collection('commerces').doc(commerceId).update({
+      await _db.collection('commerces').doc(commerceId).update({
         'galleryUrls': FieldValue.arrayRemove([imageUrl]),
       });
       return const Right(null);
@@ -410,7 +414,7 @@ class CommerceRepositoryImpl implements CommerceRepository {
       hours.forEach((day, h) {
         hoursMap[day] = {'isOpen': h.isOpen, 'openTime': h.openTime, 'closeTime': h.closeTime};
       });
-      await FirebaseFirestore.instance.collection('commerces').doc(commerceId).update({
+      await _db.collection('commerces').doc(commerceId).update({
         'businessHours': hoursMap,
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -426,7 +430,7 @@ class CommerceRepositoryImpl implements CommerceRepository {
     required String employeeId,
   }) async {
     try {
-      await FirebaseFirestore.instance.collection('commerces').doc(commerceId).update({
+      await _db.collection('commerces').doc(commerceId).update({
         'authorizedEmployeeIds': FieldValue.arrayUnion([employeeId]),
       });
       return const Right(null);
@@ -441,7 +445,7 @@ class CommerceRepositoryImpl implements CommerceRepository {
     required String employeeId,
   }) async {
     try {
-      await FirebaseFirestore.instance.collection('commerces').doc(commerceId).update({
+      await _db.collection('commerces').doc(commerceId).update({
         'authorizedEmployeeIds': FieldValue.arrayRemove([employeeId]),
       });
       return const Right(null);
@@ -507,6 +511,90 @@ class CommerceRepositoryImpl implements CommerceRepository {
         limit: limit,
       );
       return Right(activity);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  // ── Reviews ────────────────────────────────────────────────────────────────
+
+  @override
+  Future<Either<Failure, List<ReviewEntity>>> getCommerceReviews({
+    required String commerceId,
+    int limit = 20,
+  }) async {
+    try {
+      final snap = await _db
+          .collection('reviews')
+          .where('commerceId', isEqualTo: commerceId)
+          .orderBy('createdAt', descending: true)
+          .limit(limit)
+          .get();
+      final reviews = snap.docs.map((d) {
+        final data = d.data();
+        return ReviewEntity(
+          id: d.id,
+          commerceId: data['commerceId'] as String,
+          userId: data['userId'] as String,
+          userName: data['userName'] as String? ?? 'Usuario',
+          userPhotoUrl: data['userPhotoUrl'] as String?,
+          rating: (data['rating'] as num).toDouble(),
+          comment: data['comment'] as String? ?? '',
+          createdAt: (data['createdAt'] as Timestamp).toDate(),
+          helpfulCount: (data['helpfulCount'] as num?)?.toInt() ?? 0,
+          ownerReply: data['ownerReply'] as String?,
+        );
+      }).toList();
+      return Right(reviews);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, ReviewEntity>> addReview({
+    required String commerceId,
+    required String userId,
+    required String userName,
+    String? userPhotoUrl,
+    required double rating,
+    required String comment,
+  }) async {
+    try {
+      final data = {
+        'commerceId': commerceId,
+        'userId': userId,
+        'userName': userName,
+        if (userPhotoUrl != null) 'userPhotoUrl': userPhotoUrl,
+        'rating': rating,
+        'comment': comment,
+        'createdAt': FieldValue.serverTimestamp(),
+        'helpfulCount': 0,
+      };
+      final ref = await _db.collection('reviews').add(data);
+      final review = ReviewEntity(
+        id: ref.id,
+        commerceId: commerceId,
+        userId: userId,
+        userName: userName,
+        userPhotoUrl: userPhotoUrl,
+        rating: rating,
+        comment: comment,
+        createdAt: DateTime.now(),
+      );
+      return Right(review);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> voteHelpful({required String reviewId}) async {
+    try {
+      await _db.collection('reviews').doc(reviewId).update({
+        'helpfulCount': FieldValue.increment(1),
+      });
+      return const Right(null);
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }

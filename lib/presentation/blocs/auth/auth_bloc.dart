@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../domain/entities/user_entity.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../services/analytics_service.dart';
@@ -105,6 +106,8 @@ class AuthError extends AuthState {
 
 class AuthEmailVerificationSent extends AuthState {}
 
+class AuthPasswordResetSent extends AuthState {}
+
 // BLoC
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _authRepository;
@@ -129,6 +132,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
+    final prefs = await SharedPreferences.getInstance();
+    final keepLoggedIn = prefs.getBool('keep_logged_in') ?? true;
+    if (!keepLoggedIn) {
+      await _authRepository.signOut();
+      await prefs.remove('keep_logged_in');
+      emit(AuthUnauthenticated());
+      return;
+    }
     final result = await _authRepository.getCurrentUser();
     result.fold(
       (_) => emit(AuthUnauthenticated()),
@@ -226,7 +237,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     SendPasswordResetEvent event,
     Emitter<AuthState> emit,
   ) async {
-    await _authRepository.sendPasswordResetEmail(event.email);
+    final result = await _authRepository.sendPasswordResetEmail(event.email);
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (_) => emit(AuthPasswordResetSent()),
+    );
   }
 
   Future<void> _onUpdateProfile(

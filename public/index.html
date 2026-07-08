@@ -856,6 +856,8 @@ function openCreateBiz() {
   document.getElementById('ebiz-modal-title').textContent = '➕ Crear negocio';
   document.getElementById('ebiz-save-btn').textContent = '➕ Crear negocio';
   document.getElementById('ebiz-modal').classList.remove('hidden');
+  switchBizTab('info');
+  setTimeout(() => initBizPickerMap(null, null), 80);
 }
 
 function openEditBiz(id) {
@@ -883,10 +885,229 @@ function openEditBiz(id) {
   document.getElementById('ebiz-modal-title').textContent = '✏️ Editar negocio';
   document.getElementById('ebiz-save-btn').textContent = '💾 Guardar cambios';
   document.getElementById('ebiz-modal').classList.remove('hidden');
+  switchBizTab('info');
+  const locLat = b.location ? (b.location.latitude ?? b.location._lat ?? null) : null;
+  const locLng = b.location ? (b.location.longitude ?? b.location._long ?? null) : null;
+  setTimeout(() => initBizPickerMap(locLat, locLng), 80);
 }
 
 function closeEditBiz() {
   document.getElementById('ebiz-modal').classList.add('hidden');
+}
+
+// ── Business modal tabs ──────────────────────────────────────────────────────
+let _currentBizTab = 'info';
+
+function switchBizTab(tab) {
+  _currentBizTab = tab;
+  ['info','promos','gallery','reviews'].forEach(t => {
+    document.getElementById('btab-panel-' + t).classList.toggle('hidden', t !== tab);
+    const btn = document.getElementById('btab-' + t);
+    if (t === tab) { btn.style.background='var(--primary)'; btn.style.color='#000'; }
+    else           { btn.style.background='transparent'; btn.style.color='var(--text-sec)'; }
+  });
+  const id = document.getElementById('ebiz-id').value;
+  if (tab === 'promos'  && id) loadBizPromos(id);
+  if (tab === 'gallery' && id) loadBizGallery(id);
+  if (tab === 'reviews' && id) loadBizReviews(id);
+  // hide save button on non-info tabs (each tab has its own save)
+  document.getElementById('ebiz-save-btn').closest('div').style.display = tab === 'info' ? 'flex' : 'none';
+}
+
+// ── Promotions tab ───────────────────────────────────────────────────────────
+let _editingPromoId = null;
+
+async function loadBizPromos(bizId) {
+  const list = document.getElementById('promos-list');
+  const count = document.getElementById('promos-count');
+  list.innerHTML = '<p style="color:var(--text-sec);text-align:center;padding:20px;font-size:13px">Cargando...</p>';
+  const snap = await db.collection('promotions').where('commerceId','==',bizId).orderBy('startDate','desc').limit(20).get();
+  count.textContent = `${snap.size} promoción${snap.size !== 1 ? 'es' : ''}`;
+  if (snap.empty) { list.innerHTML = '<p style="color:var(--text-sec);text-align:center;padding:20px;font-size:13px">Sin promociones aún</p>'; return; }
+  list.innerHTML = snap.docs.map(doc => {
+    const p = doc.data();
+    const end = p.endDate?.toDate ? p.endDate.toDate().toLocaleDateString('es-AR') : '—';
+    const active = p.isActive !== false;
+    return `<div style="background:var(--bg-surface);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title || 'Sin título'}</div>
+        <div style="font-size:11px;color:var(--text-sec);margin-top:2px">${p.type || ''} · Vence: ${end} · ${p.usedSlots||0}/${p.totalSlots||'∞'} cupos</div>
+      </div>
+      <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${active?'#10B98122':'#EF444422'};color:${active?'var(--success)':'var(--error)'}">
+        ${active ? 'Activa' : 'Inactiva'}
+      </span>
+      <div style="display:flex;gap:6px">
+        <button onclick="editPromo('${doc.id}')" style="padding:5px 10px;background:var(--bg-hover);border:none;border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">✏️</button>
+        <button onclick="deletePromo('${doc.id}')" style="padding:5px 10px;background:rgba(239,68,68,.15);border:none;border-radius:6px;color:var(--error);font-size:11px;cursor:pointer">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openCreatePromo() {
+  _editingPromoId = null;
+  showPromoForm({});
+}
+
+async function editPromo(id) {
+  _editingPromoId = id;
+  const doc = await db.collection('promotions').doc(id).get();
+  showPromoForm({id, ...doc.data()});
+}
+
+function showPromoForm(p) {
+  const bizId = document.getElementById('ebiz-id').value;
+  const end = p.endDate?.toDate ? p.endDate.toDate().toISOString().slice(0,10) : '';
+  const start = p.startDate?.toDate ? p.startDate.toDate().toISOString().slice(0,10) : new Date().toISOString().slice(0,10);
+  const dialog = document.createElement('div');
+  dialog.id = 'promo-form-overlay';
+  dialog.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1100;display:flex;align-items:center;justify-content:center;padding:20px';
+  dialog.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <h3 style="font-size:15px;font-weight:700">${_editingPromoId ? '✏️ Editar promoción' : '➕ Nueva promoción'}</h3>
+        <button onclick="document.getElementById('promo-form-overlay').remove()" style="background:none;border:none;color:var(--text-sec);font-size:20px;cursor:pointer">×</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        ${field('pf-title','Título','text',p.title||'')}
+        ${field('pf-desc','Descripción (opcional)','text',p.description||'')}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><label style="font-size:11px;color:var(--text-sec);display:block;margin-bottom:4px">Tipo</label>
+            <select id="pf-type" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:7px;padding:9px 10px;color:var(--text);font-size:12px;outline:none">
+              <option value="discount" ${p.type==='discount'?'selected':''}>Descuento %</option>
+              <option value="fixed_discount" ${p.type==='fixed_discount'?'selected':''}>Descuento $</option>
+              <option value="buy_x_get_y" ${p.type==='buy_x_get_y'?'selected':''}>2x1 / NxM</option>
+              <option value="gift" ${p.type==='gift'?'selected':''}>Regalo</option>
+              <option value="special_price" ${p.type==='special_price'?'selected':''}>Precio especial</option>
+            </select></div>
+          ${field('pf-discount','Descuento (%)','number',p.discountValue||'')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          ${field('pf-start','Inicio','date',start)}
+          ${field('pf-end','Vencimiento','date',end)}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          ${field('pf-slots','Cupos totales','number',p.totalSlots||'')}
+          ${field('pf-points','Puntos al canjear','number',p.pointsAwarded||50)}
+        </div>
+        ${field('pf-conditions','Condiciones (opcional)','text',p.conditions||'')}
+        ${field('pf-code','Código promo (opcional)','text',p.promoCode||'')}
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button onclick="document.getElementById('promo-form-overlay').remove()" style="flex:1;padding:10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;color:var(--text-sec);font-size:13px;cursor:pointer">Cancelar</button>
+        <button onclick="savePromo('${bizId}')" style="flex:2;padding:10px;background:linear-gradient(135deg,#F0C020,#FF9500);border:none;border-radius:8px;color:#000;font-size:13px;font-weight:700;cursor:pointer">💾 Guardar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(dialog);
+}
+
+function field(id, label, type, value) {
+  return `<div><label style="font-size:11px;color:var(--text-sec);display:block;margin-bottom:4px">${label}</label>
+    <input id="${id}" type="${type}" value="${value}" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:7px;padding:9px 10px;color:var(--text);font-size:12px;outline:none"></div>`;
+}
+
+async function savePromo(bizId) {
+  const data = {
+    commerceId: bizId,
+    title: document.getElementById('pf-title').value.trim(),
+    description: document.getElementById('pf-desc').value.trim() || null,
+    type: document.getElementById('pf-type').value,
+    discountType: 'percentage',
+    discountValue: parseFloat(document.getElementById('pf-discount').value) || 0,
+    startDate: firebase.firestore.Timestamp.fromDate(new Date(document.getElementById('pf-start').value)),
+    endDate: firebase.firestore.Timestamp.fromDate(new Date(document.getElementById('pf-end').value)),
+    totalSlots: parseInt(document.getElementById('pf-slots').value) || null,
+    pointsAwarded: parseInt(document.getElementById('pf-points').value) || 50,
+    conditions: document.getElementById('pf-conditions').value.trim() || null,
+    promoCode: document.getElementById('pf-code').value.trim() || null,
+    isActive: true,
+    usedSlots: _editingPromoId ? undefined : 0,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  };
+  if (!data.title) { alert('El título es obligatorio'); return; }
+  if (_editingPromoId) {
+    await db.collection('promotions').doc(_editingPromoId).update(data);
+  } else {
+    data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    data.originalPrice = 0; data.isExclusiveForFollowers = false; data.isVip = false;
+    data.requiresCode = !!data.promoCode; data.perUserLimit = 1;
+    await db.collection('promotions').add(data);
+  }
+  document.getElementById('promo-form-overlay').remove();
+  loadBizPromos(bizId);
+  showToast(_editingPromoId ? 'Promoción actualizada' : 'Promoción creada', 'success');
+}
+
+async function deletePromo(id) {
+  if (!confirm('¿Eliminar esta promoción?')) return;
+  await db.collection('promotions').doc(id).delete();
+  const bizId = document.getElementById('ebiz-id').value;
+  loadBizPromos(bizId);
+  showToast('Promoción eliminada');
+}
+
+// ── Gallery tab ──────────────────────────────────────────────────────────────
+async function loadBizGallery(bizId) {
+  const b = allBiz.find(b => b.id === bizId);
+  const urls = b?.galleryUrls || [];
+  document.getElementById('gallery-urls').value = urls.join('\n');
+  renderGalleryPreview(urls);
+}
+
+function renderGalleryPreview(urls) {
+  const preview = document.getElementById('gallery-preview');
+  preview.innerHTML = urls.filter(u => u.trim()).map(u =>
+    `<div style="position:relative">
+      <img src="${u}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+    </div>`).join('');
+  document.getElementById('gallery-urls').oninput = function() {
+    renderGalleryPreview(this.value.split('\n'));
+  };
+}
+
+async function saveGallery() {
+  const bizId = document.getElementById('ebiz-id').value;
+  const urls = document.getElementById('gallery-urls').value.split('\n').map(u => u.trim()).filter(Boolean);
+  await db.collection('commerces').doc(bizId).update({ galleryUrls: urls, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  const idx = allBiz.findIndex(b => b.id === bizId);
+  if (idx !== -1) allBiz[idx].galleryUrls = urls;
+  showToast('Galería guardada', 'success');
+}
+
+// ── Reviews tab ──────────────────────────────────────────────────────────────
+async function loadBizReviews(bizId) {
+  const list = document.getElementById('reviews-list');
+  list.innerHTML = '<p style="color:var(--text-sec);text-align:center;padding:20px;font-size:13px">Cargando...</p>';
+  const snap = await db.collection('reviews').where('commerceId','==',bizId).orderBy('createdAt','desc').limit(30).get();
+  if (snap.empty) { list.innerHTML = '<p style="color:var(--text-sec);text-align:center;padding:20px;font-size:13px">Sin reseñas aún</p>'; return; }
+  const stars = n => '⭐'.repeat(Math.round(n));
+  list.innerHTML = snap.docs.map(doc => {
+    const r = doc.data();
+    const date = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString('es-AR') : '—';
+    return `<div style="background:var(--bg-surface);border-radius:10px;padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div>
+          <span style="font-size:13px;font-weight:600">${r.userName || 'Usuario'}</span>
+          <span style="font-size:12px;margin-left:8px">${stars(r.rating||0)}</span>
+          <span style="font-size:11px;color:var(--text-sec);margin-left:8px">${r.rating||0}/5</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;color:var(--text-sec)">${date}</span>
+          <button onclick="deleteReview('${doc.id}')" style="padding:3px 8px;background:rgba(239,68,68,.15);border:none;border-radius:5px;color:var(--error);font-size:11px;cursor:pointer">🗑️</button>
+        </div>
+      </div>
+      ${r.comment ? `<p style="font-size:12px;color:var(--text-sec);margin:0">${r.comment}</p>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function deleteReview(id) {
+  if (!confirm('¿Eliminar esta reseña?')) return;
+  const doc = await db.collection('reviews').doc(id).get();
+  const bizId = doc.data()?.commerceId;
+  await db.collection('reviews').doc(id).delete();
+  if (bizId) loadBizReviews(bizId);
+  showToast('Reseña eliminada');
 }
 
 async function saveEditBiz() {
@@ -1127,16 +1348,111 @@ async function loadMap() {
     setTimeout(() => _leafletMap.invalidateSize(), 100);
   } catch(e) { showToast('Error cargando mapa: ' + e.message, 'error'); }
 }
+
+// ════ BUSINESS LOCATION PICKER MAP ════
+let _bizPickerMap = null, _bizPickerMarker = null;
+const _ARG_DEFAULT = [-31.4, -64.18]; // Córdoba, Argentina
+
+function initBizPickerMap(lat, lng) {
+  const center = (lat && lng) ? [lat, lng] : _ARG_DEFAULT;
+  const zoom   = (lat && lng) ? 16 : 12;
+
+  if (!_bizPickerMap) {
+    _bizPickerMap = L.map('ebiz-map-picker', { zoomControl: true }).setView(center, zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap',
+      maxZoom: 19,
+    }).addTo(_bizPickerMap);
+
+    _bizPickerMap.on('click', e => {
+      placeBizMarker(e.latlng.lat, e.latlng.lng);
+    });
+  } else {
+    _bizPickerMap.setView(center, zoom);
+  }
+
+  if (lat && lng) {
+    placeBizMarker(lat, lng);
+  } else if (_bizPickerMarker) {
+    _bizPickerMarker.remove();
+    _bizPickerMarker = null;
+  }
+
+  setTimeout(() => _bizPickerMap.invalidateSize(), 120);
+}
+
+function placeBizMarker(lat, lng) {
+  const latlng = L.latLng(lat, lng);
+  if (_bizPickerMarker) {
+    _bizPickerMarker.setLatLng(latlng);
+  } else {
+    _bizPickerMarker = L.marker(latlng, { draggable: true }).addTo(_bizPickerMap);
+    _bizPickerMarker.on('dragend', () => {
+      const pos = _bizPickerMarker.getLatLng();
+      syncFieldsFromMarker(pos.lat, pos.lng);
+    });
+  }
+  syncFieldsFromMarker(lat, lng);
+  _bizPickerMap.setView(latlng, Math.max(_bizPickerMap.getZoom(), 15));
+}
+
+function syncFieldsFromMarker(lat, lng) {
+  document.getElementById('ebiz-lat').value = lat.toFixed(6);
+  document.getElementById('ebiz-lng').value = lng.toFixed(6);
+}
+
+function updateBizPickerFromFields() {
+  const lat = parseFloat(document.getElementById('ebiz-lat').value);
+  const lng = parseFloat(document.getElementById('ebiz-lng').value);
+  if (!isNaN(lat) && !isNaN(lng) && _bizPickerMap) {
+    placeBizMarker(lat, lng);
+  }
+}
+
+async function bizPickerReverseGeocode() {
+  const lat = parseFloat(document.getElementById('ebiz-lat').value);
+  const lng = parseFloat(document.getElementById('ebiz-lng').value);
+  if (isNaN(lat) || isNaN(lng)) { showToast('Primero colocá un pin en el mapa', 'warning'); return; }
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
+      headers: { 'User-Agent': 'ShinraCity/1.0 admin@shinracity.com' }
+    });
+    const data = await res.json();
+    const addr = data?.address || {};
+    const road  = addr.road || addr.pedestrian || addr.path || '';
+    const house = addr.house_number || '';
+    const city  = addr.city || addr.town || addr.village || addr.municipality || '';
+    if (road) {
+      const addrEl = document.getElementById('ebiz-address');
+      if (!addrEl.value) addrEl.value = house ? `${road} ${house}` : road;
+    }
+    if (city) {
+      const cityEl = document.getElementById('ebiz-city');
+      if (!cityEl.value) cityEl.value = city;
+    }
+    showToast('📍 Dirección completada', 'success');
+  } catch(e) { showToast('No se pudo obtener la dirección', 'error'); }
+}
 </script>
 
 <!-- ── Edit Business Modal ── -->
 <div id="ebiz-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:18px;width:100%;max-width:620px;max-height:90vh;overflow-y:auto;padding:28px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:18px;width:100%;max-width:720px;max-height:92vh;overflow-y:auto;padding:28px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
       <h2 id="ebiz-modal-title" style="font-size:17px;font-weight:700">✏️ Editar negocio</h2>
       <button onclick="closeEditBiz()" style="background:none;border:none;color:var(--text-sec);font-size:22px;cursor:pointer">×</button>
     </div>
+    <!-- Tabs -->
+    <div style="display:flex;gap:4px;background:var(--bg-surface);border-radius:10px;padding:4px;margin-bottom:20px">
+      <button id="btab-info"  onclick="switchBizTab('info')"  style="flex:1;padding:8px 4px;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:#000">📋 Info</button>
+      <button id="btab-promos" onclick="switchBizTab('promos')" style="flex:1;padding:8px 4px;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-sec)">🏷️ Promociones</button>
+      <button id="btab-gallery" onclick="switchBizTab('gallery')" style="flex:1;padding:8px 4px;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-sec)">🖼️ Galería</button>
+      <button id="btab-reviews" onclick="switchBizTab('reviews')" style="flex:1;padding:8px 4px;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-sec)">⭐ Reseñas</button>
+    </div>
     <input type="hidden" id="ebiz-id">
+
+    <!-- ── Tab: Info ── -->
+    <div id="btab-panel-info">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
 
       <div style="grid-column:1/-1">
@@ -1232,11 +1548,19 @@ async function loadMap() {
       </div>
       <div>
         <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Latitud</label>
-        <input id="ebiz-lat" type="number" step="any" placeholder="-34.6037" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+        <input id="ebiz-lat" type="number" step="any" placeholder="-34.6037" oninput="updateBizPickerFromFields()" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
       </div>
       <div>
         <label style="font-size:12px;color:var(--text-sec);display:block;margin-bottom:5px">Longitud</label>
-        <input id="ebiz-lng" type="number" step="any" placeholder="-68.3322" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+        <input id="ebiz-lng" type="number" step="any" placeholder="-68.3322" oninput="updateBizPickerFromFields()" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <!-- Mini map picker -->
+      <div style="grid-column:1/-1;margin-top:4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <label style="font-size:12px;color:var(--text-sec)">📍 Elegir en mapa <span style="font-weight:400;opacity:.7">(clic para ubicar)</span></label>
+          <button onclick="bizPickerReverseGeocode()" style="padding:4px 10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:6px;color:var(--text-sec);font-size:11px;cursor:pointer">🔍 Autocompletar dirección</button>
+        </div>
+        <div id="ebiz-map-picker" style="height:240px;border-radius:10px;overflow:hidden;border:1px solid var(--border)"></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;padding:6px 0">
         <div style="display:flex;align-items:center;gap:10px">
@@ -1253,6 +1577,34 @@ async function loadMap() {
       <button onclick="closeEditBiz()" style="flex:1;padding:11px;background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;color:var(--text-sec);font-size:13px;cursor:pointer">Cancelar</button>
       <button id="ebiz-save-btn" onclick="saveEditBiz()" style="flex:2;padding:11px;background:linear-gradient(135deg,#F0C020,#FF9500);border:none;border-radius:9px;color:#000;font-size:13px;font-weight:700;cursor:pointer" data-create-label="➕ Crear negocio" data-edit-label="💾 Guardar cambios">💾 Guardar cambios</button>
     </div>
+    </div><!-- end btab-panel-info -->
+
+    <!-- ── Tab: Promociones ── -->
+    <div id="btab-panel-promos" class="hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <span style="font-size:13px;color:var(--text-sec)" id="promos-count">Cargando...</span>
+        <button onclick="openCreatePromo()" style="padding:8px 14px;background:linear-gradient(135deg,#F0C020,#FF9500);border:none;border-radius:8px;color:#000;font-size:12px;font-weight:700;cursor:pointer">➕ Nueva promoción</button>
+      </div>
+      <div id="promos-list" style="display:flex;flex-direction:column;gap:10px;min-height:80px"></div>
+    </div>
+
+    <!-- ── Tab: Galería ── -->
+    <div id="btab-panel-gallery" class="hidden">
+      <div style="margin-bottom:14px">
+        <p style="font-size:13px;color:var(--text-sec);margin-bottom:10px">URLs de imágenes (una por línea). Las imágenes se muestran en el perfil del negocio.</p>
+        <textarea id="gallery-urls" rows="8" placeholder="https://res.cloudinary.com/..." style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:12px;font-family:monospace;outline:none;resize:vertical"></textarea>
+      </div>
+      <div id="gallery-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+      <button onclick="saveGallery()" style="width:100%;padding:10px;background:linear-gradient(135deg,#F0C020,#FF9500);border:none;border-radius:8px;color:#000;font-size:13px;font-weight:700;cursor:pointer">💾 Guardar galería</button>
+    </div>
+
+    <!-- ── Tab: Reseñas ── -->
+    <div id="btab-panel-reviews" class="hidden">
+      <div id="reviews-list" style="display:flex;flex-direction:column;gap:10px;min-height:80px">
+        <p style="color:var(--text-sec);font-size:13px;text-align:center;padding:20px">Cargando reseñas...</p>
+      </div>
+    </div>
+
   </div>
 </div>
 

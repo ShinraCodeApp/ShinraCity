@@ -1,4 +1,5 @@
-﻿import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -235,10 +236,10 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: commerce.galleryUrls.isNotEmpty
-            ? Image.network(
-                commerce.galleryUrls.first,
+            ? CachedNetworkImage(
+                imageUrl: commerce.galleryUrls.first,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _buildCoverPlaceholder(commerce),
+                errorWidget: (_, __, ___) => _buildCoverPlaceholder(commerce),
               )
             : _buildCoverPlaceholder(commerce),
       ),
@@ -356,7 +357,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
       ),
       clipBehavior: Clip.antiAlias,
       child: commerce.logoUrl != null
-          ? Image.network(commerce.logoUrl!, fit: BoxFit.cover)
+          ? CachedNetworkImage(imageUrl: commerce.logoUrl!, fit: BoxFit.cover)
           : Icon(Icons.storefront, color: AppColors.primary, size: 36),
     );
   }
@@ -718,11 +719,10 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
       itemCount: commerce.galleryUrls.length,
       itemBuilder: (_, i) => ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.network(
-          commerce.galleryUrls[i],
+        child: CachedNetworkImage(
+          imageUrl: commerce.galleryUrls[i],
           fit: BoxFit.cover,
-          loadingBuilder: (_, child, progress) =>
-              progress == null ? child : const Center(child: CircularProgressIndicator()),
+          placeholder: (_, __) => const Center(child: CircularProgressIndicator()),
         ),
       ),
     );
@@ -916,7 +916,10 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _PromotionDetailSheet(promotion: promotion),
+      builder: (_) => _PromotionDetailSheet(
+        promotion: promotion,
+        onClaim: promotion.hasAvailableSlots ? () => _claimPromotion(promotion) : null,
+      ),
     );
   }
 
@@ -1044,8 +1047,9 @@ class _ReviewCard extends StatelessWidget {
 
 class _PromotionDetailSheet extends StatelessWidget {
   final PromotionEntity promotion;
+  final VoidCallback? onClaim;
 
-  const _PromotionDetailSheet({required this.promotion});
+  const _PromotionDetailSheet({required this.promotion, this.onClaim});
 
   @override
   Widget build(BuildContext context) {
@@ -1124,7 +1128,10 @@ class _PromotionDetailSheet extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: promotion.hasAvailableSlots
-                  ? () => Navigator.of(context).pop()
+                  ? () {
+                      Navigator.of(context).pop();
+                      onClaim?.call();
+                    }
                   : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,

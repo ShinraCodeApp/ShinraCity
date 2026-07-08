@@ -2,6 +2,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../widgets/common/gradient_button.dart';
@@ -20,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
+  bool _rememberMe = true;
 
   @override
   void dispose() {
@@ -32,9 +34,30 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: BlocListener<AuthBloc, AuthState>(
-        listener: (context, state) {
+        listener: (context, state) async {
           if (state is AuthAuthenticated) {
-            context.go('/map');
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('keep_logged_in', _rememberMe);
+            if (context.mounted) context.go('/map');
+          } else if (state is AuthPasswordResetSent) {
+            showDialog(
+              context: context,
+              builder: (_) => AlertDialog(
+                backgroundColor: AppColors.backgroundCard,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: const Text('Email enviado', style: TextStyle(color: Colors.white)),
+                content: Text(
+                  'Revisá tu bandeja de entrada en ${_identifierController.text.trim()} para restablecer tu contraseña.',
+                  style: TextStyle(color: AppColors.textSecondaryDark),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Aceptar', style: TextStyle(color: AppColors.primary)),
+                  ),
+                ],
+              ),
+            );
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -143,8 +166,8 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           ShinraTextField(
             controller: _identifierController,
-            label: 'Email, usuario o negocio',
-            hint: 'juan@mail.com · Juan Pérez · Mi Tienda',
+            label: 'Email',
+            hint: 'juan@mail.com',
             prefixIcon: Icons.person_outline,
             keyboardType: TextInputType.text,
             validator: (value) {
@@ -173,18 +196,26 @@ class _LoginScreenState extends State<LoginScreen> {
               return null;
             },
           ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: _handleForgotPassword,
-              child: Text(
-                '¿Olvidaste tu contraseña?',
-                style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Checkbox(
+                value: _rememberMe,
+                onChanged: (v) => setState(() => _rememberMe = v ?? true),
+                activeColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.textSecondaryDark),
               ),
-            ),
+              Text('Mantenerme conectado',
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark)),
+              const Spacer(),
+              TextButton(
+                onPressed: _handleForgotPassword,
+                child: Text('¿Olvidaste tu contraseña?',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           BlocBuilder<AuthBloc, AuthState>(
             builder: (context, state) {
               return GradientButton(
@@ -281,23 +312,55 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _handleForgotPassword() {
     final id = _identifierController.text.trim();
-    if (id.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ingresá tu email primero')),
-      );
+    if (id.isNotEmpty && id.contains('@')) {
+      context.read<AuthBloc>().add(SendPasswordResetEvent(email: id));
       return;
     }
-    if (!id.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Para recuperar la contraseña ingresá tu email')),
-      );
-      return;
-    }
-    context.read<AuthBloc>().add(SendPasswordResetEvent(email: id));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Email de recuperación enviado'),
-        backgroundColor: AppColors.success,
+    // Ask for email via dialog
+    final emailCtrl = TextEditingController(text: id.contains('@') ? id : '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.backgroundCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Recuperar contraseña', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Ingresá el email de tu cuenta y te enviaremos un enlace para restablecer tu contraseña.',
+                style: TextStyle(color: AppColors.textSecondaryDark)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'tu@email.com',
+                hintStyle: TextStyle(color: AppColors.textSecondaryDark),
+                filled: true,
+                fillColor: AppColors.backgroundSurface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar', style: TextStyle(color: AppColors.textSecondaryDark)),
+          ),
+          TextButton(
+            onPressed: () {
+              final email = emailCtrl.text.trim();
+              if (email.contains('@')) {
+                Navigator.pop(ctx);
+                _identifierController.text = email;
+                context.read<AuthBloc>().add(SendPasswordResetEvent(email: email));
+              }
+            },
+            child: const Text('Enviar', style: TextStyle(color: AppColors.primary)),
+          ),
+        ],
       ),
     );
   }

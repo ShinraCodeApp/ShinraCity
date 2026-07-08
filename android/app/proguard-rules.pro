@@ -31,3 +31,7 @@
 
 # ShinraCity models
 -keep class com.shinracity.app.** { *; }
+
+# Play Core (referenced by Flutter deferred components)
+-dontwarn com.google.android.play.core.**
+-keep class com.google.android.play.core.** { *; }

@@ -7,6 +7,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/geo_utils.dart';
 import '../../../domain/entities/commerce_entity.dart';
 
 class AdminPanelScreen extends StatefulWidget {
@@ -1785,7 +1786,7 @@ class _CreateCommerceSheetState extends State<_CreateCommerceSheet> {
         'email': null,
         'website': null,
         'location': GeoPoint(lat, lng),
-        'geohash': '',
+        'geohash': GeoUtils.encodeGeohash(lat, lng, AppConstants.geohashPrecision),
         'logoUrl': null,
         'galleryUrls': [],
         'socialLinks': {},

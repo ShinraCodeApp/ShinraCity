@@ -1,4 +1,5 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -52,39 +53,35 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   List<_Notif>? _notifications;
   bool _loading = true;
   String? _error;
+  StreamSubscription<QuerySnapshot>? _sub;
 
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
     final user = (context.read<AuthBloc>().state is AuthAuthenticated)
         ? (context.read<AuthBloc>().state as AuthAuthenticated).user
         : null;
     if (user == null) {
-      setState(() { _loading = false; });
+      setState(() => _loading = false);
       return;
     }
-    try {
-      final snap = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.id)
-          .collection('notifications')
-          .orderBy('createdAt', descending: true)
-          .limit(50)
-          .get();
-      setState(() {
-        _notifications = snap.docs.map(_Notif.fromDoc).toList();
-        _loading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
-    }
+    _sub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.id)
+        .collection('notifications')
+        .orderBy('createdAt', descending: true)
+        .limit(50)
+        .snapshots()
+        .listen(
+          (snap) => setState(() {
+            _notifications = snap.docs.map(_Notif.fromDoc).toList();
+            _loading = false;
+          }),
+          onError: (e) => setState(() {
+            _error = e.toString();
+            _loading = false;
+          }),
+        );
   }
 
   Future<void> _markRead(String userId, _Notif notif) async {
@@ -95,20 +92,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         .collection('notifications')
         .doc(notif.id)
         .update({'isRead': true});
-    setState(() {
-      final idx = _notifications!.indexWhere((n) => n.id == notif.id);
-      if (idx != -1) {
-        _notifications![idx] = _Notif(
-          id: notif.id,
-          title: notif.title,
-          body: notif.body,
-          type: notif.type,
-          payload: notif.payload,
-          isRead: true,
-          createdAt: notif.createdAt,
-        );
-      }
-    });
+    // Stream will push the updated snapshot automatically
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 
   void _handleTap(_Notif notif, String userId) {
@@ -211,11 +201,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        color: AppColors.primary,
-        child: _buildBody(isDark, user?.id ?? ''),
-      ),
+      body: _buildBody(isDark, user?.id ?? ''),
     );
   }
 
@@ -231,12 +217,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       batch.update(col.doc(n.id), {'isRead': true});
     }
     await batch.commit();
-    setState(() {
-      _notifications = _notifications!.map((n) => _Notif(
-        id: n.id, title: n.title, body: n.body, type: n.type,
-        payload: n.payload, isRead: true, createdAt: n.createdAt,
-      )).toList();
-    });
+    // Stream will push the updated snapshot automatically
   }
 
   Widget _buildBody(bool isDark, String userId) {
@@ -422,7 +403,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           const SizedBox(height: 16),
           const Text('No se pudieron cargar las notificaciones'),
           const SizedBox(height: 12),
-          ElevatedButton(onPressed: _load, child: const Text('Reintentar')),
+          ElevatedButton(onPressed: () => setState(() { _loading = true; _error = null; }), child: const Text('Reintentar')),
         ],
       ),
     );

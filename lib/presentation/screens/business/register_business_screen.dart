@@ -1,12 +1,17 @@
-﻿import 'dart:io';
+﻿import 'dart:convert';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get_it/get_it.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/geo_utils.dart';
 import '../../../domain/entities/commerce_entity.dart';
 import '../../../services/image_upload_service.dart';
 
@@ -48,6 +53,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
   List<File> _galleryFiles = [];
   List<String> _existingGalleryUrls = [];
 
+  bool _isAmbulant = false;
   bool _saving = false;
   bool _loadingLocation = false;
   bool _loadingData = false;
@@ -95,6 +101,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
       _existingLogoUrl = data['logoUrl'] as String?;
       _existingGalleryUrls =
           (data['galleryUrls'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      _isAmbulant = data['isAmbulant'] ?? false;
     } finally {
       if (mounted) setState(() => _loadingData = false);
     }
@@ -144,6 +151,55 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
     }
     final files = await _imageService.pickMultipleFromGallery(limit: remaining);
     if (files.isNotEmpty) setState(() => _galleryFiles.addAll(files));
+  }
+
+  Future<void> _pickLocationOnMap() async {
+    double? initLat = double.tryParse(_lat.text);
+    double? initLng = double.tryParse(_lng.text);
+    final picked = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        builder: (_) => _MapPickerScreen(
+          initialPosition: (initLat != null && initLng != null)
+              ? LatLng(initLat, initLng)
+              : null,
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _lat.text = picked.latitude.toStringAsFixed(6);
+      _lng.text = picked.longitude.toStringAsFixed(6);
+    });
+    _reverseGeocode(picked.latitude, picked.longitude);
+  }
+
+  Future<void> _reverseGeocode(double lat, double lng) async {
+    try {
+      final res = await Dio().get(
+        'https://nominatim.openstreetmap.org/reverse',
+        queryParameters: {'lat': lat, 'lon': lng, 'format': 'json'},
+        options: Options(headers: {'User-Agent': 'ShinraCity/1.0'}),
+      );
+      final data = res.data is String ? jsonDecode(res.data) : res.data;
+      if (data == null) return;
+      final addr = data['address'] as Map<String, dynamic>? ?? {};
+      final road = addr['road'] ?? addr['pedestrian'] ?? addr['path'] ?? '';
+      final house = addr['house_number'] ?? '';
+      final city = addr['city'] ?? addr['town'] ?? addr['village'] ?? addr['municipality'] ?? '';
+      if (road.isNotEmpty && mounted) {
+        setState(() {
+          if (_address.text.isEmpty) {
+            _address.text = house.isNotEmpty ? '$road $house' : road;
+          }
+          if (_city.text.isEmpty && city.isNotEmpty) {
+            _city.text = city;
+          }
+        });
+        _showSnack('📍 Dirección detectada', color: AppColors.success);
+      }
+    } catch (_) {
+      // Silently ignore geocode failures
+    }
   }
 
   Future<void> _getGpsLocation() async {
@@ -244,9 +300,10 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
           if (_facebook.text.trim().isNotEmpty) 'facebook': _facebook.text.trim(),
         },
         'location': GeoPoint(lat, lng),
-        'geohash': '',
+        'geohash': GeoUtils.encodeGeohash(lat, lng, AppConstants.geohashPrecision),
         'logoUrl': logoUrl,
         'galleryUrls': galleryUrls,
+        'isAmbulant': _isAmbulant,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
@@ -364,17 +421,29 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                         _field(_name, '🏷️ Nombre del negocio', required: true),
                         _field(_description, '📝 Descripción', required: true, maxLines: 3),
                         _categoryDropdown(),
+                        _ambulantToggle(),
                       ],
                     ),
                     const SizedBox(height: 20),
                     _buildSection(
                       icon: '📍',
-                      title: 'Ubicación',
+                      title: _isAmbulant ? 'Ubicación base (referencial)' : 'Ubicación',
                       children: [
-                        _field(_address, '🏠 Dirección', required: true),
+                        _field(_address, '🏠 Dirección', required: !_isAmbulant),
                         _field(_city, '🌆 Ciudad', required: true),
                         _field(_country, '🌎 País'),
                         _coordinatesRow(),
+                        if (_isAmbulant)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4, bottom: 8),
+                            child: Text(
+                              '📡 Tu ubicación en tiempo real se mostrará en el mapa cuando la app esté abierta.',
+                              style: TextStyle(
+                                color: AppColors.textSecondaryDark,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -562,6 +631,46 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
     );
   }
 
+  Widget _ambulantToggle() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundSurface,
+        borderRadius: BorderRadius.circular(10),
+        border: _isAmbulant
+            ? Border.all(color: AppColors.primary.withValues(alpha: 0.6))
+            : null,
+      ),
+      child: Row(
+        children: [
+          const Text('🚶', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Vendedor ambulante',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  'Tu ubicación se actualiza en vivo en el mapa',
+                  style: TextStyle(color: AppColors.textSecondaryDark, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _isAmbulant,
+            onChanged: (v) => setState(() => _isAmbulant = v),
+            activeThumbColor: AppColors.primary,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _categoryDropdown() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -676,6 +785,23 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                     ),
                   )
                 : const Icon(Icons.my_location, size: 20),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.backgroundCard,
+              foregroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+              ),
+            ),
+            onPressed: _pickLocationOnMap,
+            child: const Icon(Icons.map_outlined, size: 20),
           ),
         ),
       ],
@@ -839,4 +965,131 @@ class _GalleryItem {
 
 extension on Map {
   dynamic get(String key) => this[key];
+}
+
+// ── Full-screen map to pick a location ──────────────────────────────────────
+
+class _MapPickerScreen extends StatefulWidget {
+  final LatLng? initialPosition;
+  const _MapPickerScreen({this.initialPosition});
+
+  @override
+  State<_MapPickerScreen> createState() => _MapPickerScreenState();
+}
+
+class _MapPickerScreenState extends State<_MapPickerScreen> {
+  static const _defaultCenter = LatLng(-31.4, -64.18); // Córdoba, Argentina
+  late final MapController _mapCtrl;
+  LatLng? _picked;
+
+  @override
+  void initState() {
+    super.initState();
+    _mapCtrl = MapController();
+    _picked = widget.initialPosition;
+  }
+
+  @override
+  void dispose() {
+    _mapCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final center = _picked ?? widget.initialPosition ?? _defaultCenter;
+    return Scaffold(
+      backgroundColor: AppColors.backgroundDark,
+      appBar: AppBar(
+        backgroundColor: AppColors.backgroundCard,
+        title: Text(
+          '📍 Elegir ubicación en mapa',
+          style: AppTextStyles.titleMedium.copyWith(color: Colors.white),
+        ),
+        actions: [
+          if (_picked != null)
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(_picked),
+              child: Text(
+                'Confirmar',
+                style: AppTextStyles.titleSmall.copyWith(color: AppColors.primary),
+              ),
+            ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          FlutterMap(
+            mapController: _mapCtrl,
+            options: MapOptions(
+              initialCenter: center,
+              initialZoom: widget.initialPosition != null ? 16.0 : 13.0,
+              onTap: (_, latLng) => setState(() => _picked = latLng),
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.shinracity.app',
+              ),
+              if (_picked != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _picked!,
+                      width: 48,
+                      height: 48,
+                      child: const Icon(
+                        Icons.location_pin,
+                        color: AppColors.primary,
+                        size: 48,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          Positioned(
+            top: 12,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.backgroundCard.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  _picked == null
+                      ? 'Tocá el mapa para marcar la ubicación'
+                      : '${_picked!.latitude.toStringAsFixed(5)}, ${_picked!.longitude.toStringAsFixed(5)}',
+                  style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+          if (_picked != null)
+            Positioned(
+              bottom: 24,
+              left: 24,
+              right: 24,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () => Navigator.of(context).pop(_picked),
+                child: const Text(
+                  '✅ Confirmar ubicación',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }

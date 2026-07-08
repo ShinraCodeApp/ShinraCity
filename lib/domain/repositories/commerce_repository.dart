@@ -1,6 +1,7 @@
 ﻿import 'package:dartz/dartz.dart';
 import 'package:latlong2/latlong.dart';
 import '../entities/commerce_entity.dart';
+import '../entities/review_entity.dart';
 import '../../core/errors/failures.dart';
 
 abstract class CommerceRepository {
@@ -117,4 +118,22 @@ abstract class CommerceRepository {
     required String commerceId,
     int limit = 5,
   });
+
+  // ── Reviews ──────────────────────────────────────────────────────────────
+
+  Future<Either<Failure, List<ReviewEntity>>> getCommerceReviews({
+    required String commerceId,
+    int limit = 20,
+  });
+
+  Future<Either<Failure, ReviewEntity>> addReview({
+    required String commerceId,
+    required String userId,
+    required String userName,
+    String? userPhotoUrl,
+    required double rating,
+    required String comment,
+  });
+
+  Future<Either<Failure, void>> voteHelpful({required String reviewId});
 }

@@ -564,12 +564,69 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                 if (_isProcessing) ...[
                   const SizedBox(height: 16),
                   const CircularProgressIndicator(color: AppColors.primary),
+                ] else ...[
+                  const SizedBox(height: 20),
+                  TextButton.icon(
+                    onPressed: _enterCodeManually,
+                    icon: const Icon(Icons.keyboard, color: AppColors.primary),
+                    label: Text('Ingresar código manualmente',
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
+                  ),
                 ],
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  void _enterCodeManually() {
+    final codeCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.backgroundCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Ingresar código', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: codeCtrl,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(color: Colors.white, letterSpacing: 4, fontSize: 20),
+          textAlign: TextAlign.center,
+          decoration: InputDecoration(
+            hintText: '000000',
+            hintStyle: TextStyle(color: AppColors.textSecondaryDark),
+            filled: true,
+            fillColor: AppColors.backgroundSurface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar', style: TextStyle(color: AppColors.textSecondaryDark)),
+          ),
+          TextButton(
+            onPressed: () {
+              final code = codeCtrl.text.trim();
+              if (code.isEmpty) return;
+              Navigator.pop(ctx);
+              setState(() => _isProcessing = true);
+              _controller.stop();
+              context.read<CouponsBloc>().add(ValidateCouponEvent(
+                qrData: code,
+                commerceId: widget.commerceId,
+              ));
+            },
+            child: const Text('Validar', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 

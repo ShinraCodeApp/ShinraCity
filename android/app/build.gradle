@@ -23,6 +23,12 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+def keyProperties = new Properties()
+def keyPropertiesFile = rootProject.file('key.properties')
+if (keyPropertiesFile.exists()) {
+    keyPropertiesFile.withReader('UTF-8') { reader -> keyProperties.load(reader) }
+}
+
 android {
     namespace "com.shinracity.app"
     compileSdk 36
@@ -51,6 +57,15 @@ android {
         multiDexEnabled true
     }
 
+    signingConfigs {
+        release {
+            keyAlias keyProperties['keyAlias']
+            keyPassword keyProperties['keyPassword']
+            storeFile keyProperties['storeFile'] ? file("${rootProject.projectDir}/${keyProperties['storeFile']}") : null
+            storePassword keyProperties['storePassword']
+        }
+    }
+
     buildTypes {
         debug {
             debuggable true
@@ -60,13 +75,28 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug // Replace with release signing config
+            signingConfig signingConfigs.release
+            ndk {
+                debugSymbolLevel 'NONE'
+            }
         }
     }
 
     applicationVariants.all { variant ->
         variant.outputs.all {
             outputFileName = "ShinraCity-${variant.versionName}.apk"
+        }
+
+        def bundleTaskName = "bundle${variant.name.capitalize()}"
+        tasks.whenTaskAdded { task ->
+            if (task.name == bundleTaskName) {
+                task.doLast {
+                    def aabDir = new File("${buildDir}/outputs/bundle/${variant.name}")
+                    aabDir.listFiles()?.findAll { it.name.endsWith('.aab') }?.each { aab ->
+                        aab.renameTo(new File(aabDir, "ShinraCity-${variant.versionName}.aab"))
+                    }
+                }
+            }
         }
     }
 }

@@ -116,10 +116,21 @@ class AppRouter {
             ),
             GoRoute(
               path: '/business',
-              builder: (_, __) => BlocProvider(
-                create: (_) => GetIt.instance<PromotionsBloc>(),
-                child: const BusinessDashboardScreen(),
-              ),
+              builder: (context, _) {
+                final authState = context.read<AuthBloc>().state;
+                final userId = authState is AuthAuthenticated ? authState.user.id : '';
+                return MultiBlocProvider(
+                  providers: [
+                    BlocProvider(
+                      create: (_) => GetIt.instance<CommerceBloc>(param1: userId),
+                    ),
+                    BlocProvider(
+                      create: (_) => GetIt.instance<PromotionsBloc>(),
+                    ),
+                  ],
+                  child: const BusinessDashboardScreen(),
+                );
+              },
             ),
           ],
         ),

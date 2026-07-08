@@ -6,6 +6,7 @@ import 'package:mockito/mockito.dart';
 import 'package:shinra_city/core/errors/failures.dart';
 import 'package:shinra_city/domain/entities/commerce_entity.dart';
 import 'package:shinra_city/domain/entities/promotion_entity.dart';
+import 'package:shinra_city/domain/entities/review_entity.dart';
 import 'package:shinra_city/domain/repositories/commerce_repository.dart';
 import 'package:shinra_city/domain/repositories/promotion_repository.dart';
 import 'package:shinra_city/presentation/blocs/map/map_bloc.dart';
@@ -62,7 +63,53 @@ class MockCommerceRepository extends Mock implements CommerceRepository {
       super.noSuchMethod(
         Invocation.method(#getCommerce, [id]),
         returnValue: Future<Either<Failure, CommerceEntity>>.value(Left(ServerFailure(message: 'error'))),
-      );
+        returnValueForMissingStub: Future<Either<Failure, CommerceEntity>>.value(Left(ServerFailure(message: 'error'))),
+      ) as Future<Either<Failure, CommerceEntity>>;
+
+  @override
+  Future<Either<Failure, List<ReviewEntity>>> getCommerceReviews({
+    required String? commerceId,
+    int limit = 20,
+  }) =>
+      super.noSuchMethod(
+        Invocation.method(#getCommerceReviews, [], {#commerceId: commerceId, #limit: limit}),
+        returnValue: Future<Either<Failure, List<ReviewEntity>>>.value(const Right([])),
+        returnValueForMissingStub: Future<Either<Failure, List<ReviewEntity>>>.value(const Right([])),
+      ) as Future<Either<Failure, List<ReviewEntity>>>;
+
+  @override
+  Future<Either<Failure, ReviewEntity>> addReview({
+    required String? commerceId,
+    required String? userId,
+    required String? userName,
+    String? userPhotoUrl,
+    required double? rating,
+    required String? comment,
+  }) =>
+      super.noSuchMethod(
+        Invocation.method(#addReview, [], {
+          #commerceId: commerceId,
+          #userId: userId,
+          #userName: userName,
+          #userPhotoUrl: userPhotoUrl,
+          #rating: rating,
+          #comment: comment,
+        }),
+        returnValue: Future<Either<Failure, ReviewEntity>>.value(
+          const Left(ServerFailure(message: 'error')),
+        ),
+        returnValueForMissingStub: Future<Either<Failure, ReviewEntity>>.value(
+          const Left(ServerFailure(message: 'error')),
+        ),
+      ) as Future<Either<Failure, ReviewEntity>>;
+
+  @override
+  Future<Either<Failure, void>> voteHelpful({required String? reviewId}) =>
+      super.noSuchMethod(
+        Invocation.method(#voteHelpful, [], {#reviewId: reviewId}),
+        returnValue: Future<Either<Failure, void>>.value(const Right(null)),
+        returnValueForMissingStub: Future<Either<Failure, void>>.value(const Right(null)),
+      ) as Future<Either<Failure, void>>;
 }
 
 class MockPromotionRepository extends Mock implements PromotionRepository {

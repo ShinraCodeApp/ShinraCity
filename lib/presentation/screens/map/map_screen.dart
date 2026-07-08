@@ -42,6 +42,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   late AnimationController _pulseController;
   StreamSubscription<Position>? _locationStream;
   CommerceCategory? _activeCategory;
+  Timer? _cameraDebounce;
+  DateTime? _lastNearbyNotification;
 
   String get _tileUrl {
     if (_isSatellite) {
@@ -67,6 +69,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _cameraDebounce?.cancel();
     _pulseController.dispose();
     _locationStream?.cancel();
     super.dispose();
@@ -115,6 +118,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void _triggerNearbyNotification(LatLng location) {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
+    final now = DateTime.now();
+    if (_lastNearbyNotification != null &&
+        now.difference(_lastNearbyNotification!).inMinutes <
+            AppConstants.geofenceNotificationCooldownMinutes) return;
+    _lastNearbyNotification = now;
     FirebaseFunctions.instance
         .httpsCallable('sendNearbyPromoNotification')
         .call({
@@ -237,7 +245,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           _buildControlButton(
             icon: Icons.my_location,
             onTap: _centerOnLocation,
-            tooltip: 'Mi ubicaciÃ³n',
+            tooltip: 'Mi ubicación',
           ),
           const SizedBox(height: 12),
           _buildControlButton(
@@ -249,7 +257,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           _buildControlButton(
             icon: _isSatellite ? Icons.map : Icons.satellite,
             onTap: _toggleMapType,
-            tooltip: _isSatellite ? 'Vista mapa' : 'Vista satÃ©lite',
+            tooltip: _isSatellite ? 'Vista mapa' : 'Vista satélite',
           ),
           const SizedBox(height: 12),
           _buildControlButton(
@@ -373,10 +381,16 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       final hasPromo = commerce.hasActivePromotion;
       final isOpen = commerce.isCurrentlyOpen;
       final opacity = isOpen ? 0.9 : 0.45;
-      final size = hasPromo ? 50.0 : 38.0;
+      final isAmbulant = commerce.isAmbulant;
+      final size = hasPromo ? 50.0 : (isAmbulant ? 44.0 : 38.0);
+
+      // Ambulant vendors show at their live location when available
+      final markerPoint = (isAmbulant && commerce.liveLocation != null)
+          ? commerce.liveLocation!
+          : commerce.location;
 
       newMarkers.add(Marker(
-        point: commerce.location,
+        point: markerPoint,
         width: size,
         height: size,
         child: GestureDetector(
@@ -407,20 +421,40 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     ],
                   ),
                 ),
+              // Ambulant pulsing ring
+              if (isAmbulant && commerce.liveLocation != null)
+                AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (_, __) => Container(
+                    width: size + 10 + (_pulseController.value * 8),
+                    height: size + 10 + (_pulseController.value * 8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.orangeAccent.withValues(
+                            alpha: (1 - _pulseController.value) * 0.7),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
               // Círculo de categoría
               Container(
                 width: size - (hasPromo ? 8 : 0),
                 height: size - (hasPromo ? 8 : 0),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: baseColor.withValues(alpha: opacity),
+                  color: isAmbulant
+                      ? Colors.orange.withValues(alpha: opacity)
+                      : baseColor.withValues(alpha: opacity),
                   border: Border.all(
                     color: Colors.white.withValues(alpha: isOpen ? 0.6 : 0.3),
                     width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: baseColor.withValues(alpha: 0.4),
+                      color: (isAmbulant ? Colors.orange : baseColor)
+                          .withValues(alpha: 0.4),
                       blurRadius: 6,
                       spreadRadius: 1,
                     ),
@@ -429,7 +463,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 child: hasPromo
                     ? const Icon(Icons.local_offer, color: Colors.white, size: 16)
                     : Icon(
-                        _getCategoryIcon(commerce.category),
+                        isAmbulant
+                            ? Icons.directions_walk
+                            : _getCategoryIcon(commerce.category),
                         color: Colors.white.withValues(alpha: isOpen ? 0.9 : 0.5),
                         size: 14,
                       ),
@@ -441,7 +477,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
       if (hasPromo) {
         newCircles.add(CircleMarker(
-          point: commerce.location,
+          point: markerPoint,
           radius: AppConstants.geofenceRadiusMeters,
           useRadiusInMeter: true,
           color: baseColor.withValues(alpha: 0.08),
@@ -495,10 +531,14 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   void _onCameraMove(MapCamera camera, bool hasGesture) {
     if (camera.zoom > 12) {
-      context.read<MapBloc>().add(LoadNearbyCommerces(
-        location: camera.center,
-        radiusKm: AppConstants.nearbyRadiusKm * (20 - camera.zoom) / 10,
-      ));
+      _cameraDebounce?.cancel();
+      _cameraDebounce = Timer(const Duration(milliseconds: 500), () {
+        if (!mounted) return;
+        context.read<MapBloc>().add(LoadNearbyCommerces(
+          location: camera.center,
+          radiusKm: AppConstants.nearbyRadiusKm * (20 - camera.zoom) / 10,
+        ));
+      });
     }
   }
 
@@ -597,7 +637,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
             ],
           ),
           const SizedBox(height: 24),
-          Text('CategorÃ­as', style: AppTextStyles.titleMedium.copyWith(color: AppColors.textSecondaryDark)),
+          Text('Categorías', style: AppTextStyles.titleMedium.copyWith(color: AppColors.textSecondaryDark)),
           const SizedBox(height: 12),
           Expanded(
             child: SingleChildScrollView(

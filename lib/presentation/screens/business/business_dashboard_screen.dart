@@ -1,4 +1,6 @@
 ﻿import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -7,6 +9,9 @@ import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/commerce_entity.dart';
+import '../../../domain/entities/user_entity.dart';
+import '../../blocs/auth/auth_bloc.dart';
+import '../../../services/ambulant_location_service.dart';
 import '../../../services/image_upload_service.dart';
 import '../../../domain/entities/promotion_entity.dart';
 import '../../blocs/commerce/commerce_bloc.dart';
@@ -25,6 +30,12 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
   File? _pendingLogoFile;
 
   @override
+  void dispose() {
+    AmbulantLocationService.instance.stop();
+    super.dispose();
+  }
+
+  @override
   void initState() {
     super.initState();
     context.read<CommerceBloc>().add(LoadBusinessDashboard());
@@ -40,7 +51,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
-            onPressed: () => context.go('/settings'),
+            onPressed: () => context.go('/notifications'),
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -57,6 +68,11 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                 context.read<PromotionsBloc>().add(
                   LoadCommercePromotions(commerceId: state.commerce.id),
                 );
+                if (state.commerce.isAmbulant) {
+                  AmbulantLocationService.instance.start(state.commerce.id);
+                } else {
+                  AmbulantLocationService.instance.stop();
+                }
               }
             },
           ),
@@ -1082,39 +1098,78 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
         );
   }
 
-  void _showRegisterDialog(BuildContext context) {
+  Future<void> _showRegisterDialog(BuildContext context) async {
+    final authState = context.read<AuthBloc>().state;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final isAdmin = authState is AuthAuthenticated &&
+        (authState.user.role == UserRole.admin ||
+            authState.user.role == UserRole.superAdmin);
+
+    if (!isAdmin) {
+      final existing = await FirebaseFirestore.instance
+          .collection('commerces')
+          .where('ownerId', isEqualTo: uid)
+          .limit(1)
+          .get();
+
+      if (existing.docs.isNotEmpty && context.mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            backgroundColor: AppColors.backgroundCard,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text('Límite alcanzado',
+                style: AppTextStyles.titleLarge.copyWith(color: Colors.white)),
+            content: Text(
+              'Tu cuenta ya tiene un negocio registrado. Para agregar un segundo local necesitás el plan Enterprise.',
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondaryDark),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancelar',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark)),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.push('/plan-upgrade');
+                },
+                child: Text('Ver planes',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    }
+
+    if (!context.mounted) return;
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.backgroundCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Registrar comercio',
-          style: AppTextStyles.titleLarge.copyWith(color: Colors.white),
-        ),
+        title: Text('Registrar comercio',
+            style: AppTextStyles.titleLarge.copyWith(color: Colors.white)),
         content: Text(
           'Para registrar tu comercio completá el formulario a continuación. '
           'Tu solicitud será revisada en un plazo de 24-48 horas.',
-          style: AppTextStyles.bodyMedium
-              .copyWith(color: AppColors.textSecondaryDark),
+          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondaryDark),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Cancelar',
-                style:
-                    AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark)),
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark)),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Te enviamos un email con los pasos a seguir.'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: AppColors.primary,
-                ),
-              );
+              context.push('/register-business');
             },
             child: Text('Solicitar registro',
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
