@@ -317,6 +317,10 @@ class FirebaseAuthDatasource {
     switch (code) {
       case 'user-not-found': return 'No existe una cuenta con este email';
       case 'wrong-password': return 'Contraseña incorrecta';
+      // Firebase ya no distingue email inexistente de contraseña incorrecta
+      case 'invalid-credential':
+      case 'INVALID_LOGIN_CREDENTIALS': return 'Email o contraseña incorrectos';
+      case 'user-disabled': return 'Esta cuenta está deshabilitada';
       case 'email-already-in-use': return 'Este email ya está registrado';
       case 'weak-password': return 'La contraseña debe tener al menos 6 caracteres';
       case 'invalid-email': return 'Email inválido';
