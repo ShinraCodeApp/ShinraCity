@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../presentation/blocs/auth/auth_bloc.dart';
+import '../constants/app_constants.dart';
 import '../theme/app_theme.dart';
 
 /// Sin cuenta se puede mirar el mapa, los comercios y sus promociones; para
@@ -35,7 +36,8 @@ bool requireAccount(BuildContext context, {required String reason}) {
             const Icon(Icons.lock_open_rounded, color: AppColors.primary, size: 40),
             const SizedBox(height: 12),
             const Text(
-              'Creá tu cuenta gratis',
+              'Creá tu cuenta gratis en ${AppConstants.appName}',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 20,
