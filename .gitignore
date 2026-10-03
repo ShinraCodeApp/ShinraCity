@@ -35,3 +35,4 @@ Thumbs.db
 .firebase/
 test_rules/node_modules/
 *-debug.log
+dist/

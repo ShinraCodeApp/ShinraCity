@@ -2,8 +2,8 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = 'ShinraCity';
-  static const String appVersion = '1.0.3';
-  static const String appBuildNumber = '3';
+  static const String appVersion = '1.0.8';
+  static const String appBuildNumber = '16';
 
   // Firebase Collections
   static const String usersCollection = 'users';
@@ -99,7 +99,8 @@ class AppConstants {
   static const String encryptionAlgorithm = 'AES';
   static const int keyLength = 256;
 
-  // Admin gate — UI-only layer; real security relies on Firestore rules + Firebase role checks
-  // TODO: replace with Firebase Custom Claims verification for production
+  // Admin gate — traba extra de pantalla (huella o esta clave). No es
+  // seguridad: el panel solo abre para admin@shinracity.com y firestore.rules
+  // valida ese email en cada lectura/escritura.
   static const String adminGatePassword = 'ShinraSakujo';
 }
