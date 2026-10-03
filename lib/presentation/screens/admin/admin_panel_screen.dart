@@ -831,18 +831,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                               style: TextStyle(color: Colors.white)),
                         ]),
                       ),
-                    if (role != 'admin' && role != 'superAdmin')
-                      PopupMenuItem(
-                        value: 'make_admin',
-                        child: Row(children: [
-                          const Icon(Icons.admin_panel_settings,
-                              size: 16, color: AppColors.error),
-                          const SizedBox(width: 8),
-                          Text('Hacer admin',
-                              style: TextStyle(color: Colors.white)),
-                        ]),
-                      )
-                    else if (role == 'admin')
+                    // No hay "Hacer admin": el único admin es admin@shinracity.com
+                    // (firestore.rules). Queda "Quitar admin" para limpiar roles viejos.
+                    if (role == 'admin' || role == 'superAdmin')
                       PopupMenuItem(
                         value: 'remove_admin',
                         child: Row(children: [

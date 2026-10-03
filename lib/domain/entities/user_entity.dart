@@ -47,7 +47,17 @@ extension UserLevelX on UserLevel {
 
 enum AuthProvider { email, google, apple, facebook }
 
+/// Única cuenta con permisos de administrador. Debe coincidir con isAdmin()
+/// en firestore.rules y storage.rules: el campo `role` del perfil no da
+/// permisos de admin (antes cualquiera podía escribirlo al registrarse).
+const String kSuperAdminEmail = 'admin@shinracity.com';
+
+bool isSuperAdminEmail(String? email) => (email ?? '').trim().toLowerCase() == kSuperAdminEmail;
+
 class UserEntity extends Equatable {
+  /// true solo para la cuenta del super admin.
+  bool get isAdmin => isSuperAdminEmail(email);
+
   final String id;
   final String email;
   final String? displayName;

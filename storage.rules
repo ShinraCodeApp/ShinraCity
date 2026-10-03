@@ -10,6 +10,20 @@ service firebase.storage {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // mismo super admin que en firestore.rules
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.email == 'admin@shinracity.com';
+    }
+
+    function ownsCommerce(commerceId) {
+      return isAuthenticated()
+        && firestore.get(/databases/(default)/documents/commerces/$(commerceId)).data.ownerId == request.auth.uid;
+    }
+
+    function ownsPromotion(promotionId) {
+      return ownsCommerce(firestore.get(/databases/(default)/documents/promotions/$(promotionId)).data.commerceId);
+    }
+
     function isValidImage() {
       return request.resource.contentType.matches('image/.*')
         && request.resource.size < 10 * 1024 * 1024; // 10MB
@@ -20,32 +34,35 @@ service firebase.storage {
         && request.resource.size < 2 * 1024 * 1024; // 2MB
     }
 
-    // User avatars — path: users/{userId}/avatar.jpg
+    // User avatars — users/{userId}/...
     match /users/{userId}/{allPaths=**} {
       allow read: if true;
       allow write: if isCurrentUser(userId) && isValidAvatar();
-      allow delete: if isCurrentUser(userId);
+      allow delete: if isCurrentUser(userId) || isAdmin();
     }
 
-    // Commerce images — path: commerces/{commerceId}/logo.jpg or commerces/{commerceId}/gallery/...
-    match /commerces/{commerceId}/{allPaths=**} {
+    // Rutas reales que usa la app (AppConstants): commerces/logos/{id}/logo.jpg
+    // y commerces/gallery/{id}/{timestamp}.jpg. Las reglas anteriores usaban
+    // commerces/{id}/..., que tomaba "logos" como id y dejaba subir/borrar a
+    // cualquiera con sesión. Ahora solo el dueño del comercio (o el admin).
+    match /commerces/{folder}/{commerceId}/{allPaths=**} {
       allow read: if true;
-      allow write: if isAuthenticated() && isValidImage();
-      allow delete: if isAuthenticated();
+      allow write: if (ownsCommerce(commerceId) || isAdmin()) && isValidImage();
+      allow delete: if ownsCommerce(commerceId) || isAdmin();
     }
 
-    // Promotion images — path: promotions/{promotionId}/{fileName}
-    match /promotions/{promotionId}/{allPaths=**} {
+    // promotions/images/{promotionId}/{timestamp}.jpg
+    match /promotions/{folder}/{promotionId}/{allPaths=**} {
       allow read: if true;
-      allow write: if isAuthenticated() && isValidImage();
-      allow delete: if isAuthenticated();
+      allow write: if (ownsPromotion(promotionId) || isAdmin()) && isValidImage();
+      allow delete: if ownsPromotion(promotionId) || isAdmin();
     }
 
-    // Reward images
-    match /rewards/{rewardId}/{allPaths=**} {
+    // rewards/images/... — solo el admin
+    match /rewards/{allPaths=**} {
       allow read: if true;
-      allow write: if isAuthenticated() && isValidImage();
-      allow delete: if isAuthenticated();
+      allow write: if isAdmin() && isValidImage();
+      allow delete: if isAdmin();
     }
   }
 }

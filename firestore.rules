@@ -10,60 +10,108 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
+    // Único super admin de la plataforma. Se identifica por el email de la
+    // cuenta (lo firma Firebase Auth), no por el campo `role` del documento:
+    // ese campo lo podía escribir cualquiera al crear su propio perfil.
     function isAdmin() {
-      return isAuthenticated() && getUserData().role in ['admin', 'superAdmin'];
+      return isAuthenticated() && request.auth.token.email == 'admin@shinracity.com';
     }
 
-    function isBusinessOwner() {
-      return isAuthenticated() && getUserData().role in ['businessOwner', 'admin', 'superAdmin'];
+    function changed() {
+      return request.resource.data.diff(resource.data).affectedKeys();
     }
 
     function ownsCommerce(commerceId) {
-      return isAuthenticated() && get(/databases/$(database)/documents/commerces/$(commerceId)).data.ownerId == request.auth.uid;
+      return isAuthenticated()
+        && get(/databases/$(database)/documents/commerces/$(commerceId)).data.ownerId == request.auth.uid;
+    }
+
+    // Campos del perfil que el usuario no puede tocar: los maneja el admin.
+    // Los puntos no tienen ninguna forma legítima de sumarse desde la app
+    // (no hay Cloud Functions publicadas), así que nadie puede subírselos.
+    function protectedUserFields() {
+      return ['role', 'isActive', 'isSuspended', 'isVerified', 'totalPoints', 'level',
+              'totalCouponsRedeemed', 'totalSavings', 'badgeIds', 'achievementIds'];
     }
 
     // Users
     match /users/{userId} {
       allow read: if isCurrentUser(userId) || isAdmin();
-      allow create: if isCurrentUser(userId);
-      // Users can update their own profile but cannot change role/suspension/verification fields
-      allow update: if (isCurrentUser(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isActive', 'isSuspended', 'isVerified'])) || isAdmin();
-      allow delete: if isAdmin();
+      // un perfil nuevo nace como usuario común y sin puntos
+      allow create: if isCurrentUser(userId)
+                    && request.resource.data.get('role', 'user') == 'user'
+                    && request.resource.data.get('totalPoints', 0) == 0
+                    && request.resource.data.get('availablePoints', 0) == 0
+                    && request.resource.data.get('isVerified', false) == false;
+      allow update: if isAdmin()
+                    || (isCurrentUser(userId)
+                        && !changed().hasAny(protectedUserFields())
+                        // availablePoints solo puede bajar (canje de recompensas)
+                        && (!changed().hasAny(['availablePoints'])
+                            || request.resource.data.availablePoints < resource.data.availablePoints))
+                    // al registrar su comercio, el usuario pasa de 'user' a 'businessOwner' (y nada más)
+                    || (isCurrentUser(userId)
+                        && changed().hasOnly(['role', 'updatedAt'])
+                        && resource.data.role == 'user'
+                        && request.resource.data.role == 'businessOwner');
+      allow delete: if isCurrentUser(userId) || isAdmin();
     }
 
     // Commerces
     match /commerces/{commerceId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      allow update: if ownsCommerce(commerceId) || isAdmin();
+      // nadie puede crear un comercio a nombre de otro
+      allow create: if isAdmin()
+                    || (isAuthenticated()
+                        && request.resource.data.ownerId == request.auth.uid
+                        // verificado / destacado / plan pago solo los pone el admin
+                        && request.resource.data.get('isVerified', false) == false
+                        && request.resource.data.get('isFeatured', false) == false
+                        && request.resource.data.get('plan', 'free') == 'free');
+      allow update: if isAdmin()
+                    || (ownsCommerce(commerceId) && !changed().hasAny(['ownerId', 'isVerified', 'isFeatured', 'plan']))
+                    // seguir / dejar de seguir: solo el contador, de a uno
+                    || (isAuthenticated()
+                        && changed().hasOnly(['followerCount'])
+                        && (request.resource.data.followerCount == resource.data.get('followerCount', 0) + 1
+                            || request.resource.data.followerCount == resource.data.get('followerCount', 0) - 1));
       allow delete: if isAdmin();
     }
 
     // Promotions
     match /promotions/{promotionId} {
       allow read: if true;
-      allow create: if isBusinessOwner() || ownsCommerce(request.resource.data.commerceId);
-      allow update: if ownsCommerce(resource.data.commerceId) || isAdmin()
+      // solo para un comercio propio
+      allow create: if isAdmin() || ownsCommerce(request.resource.data.commerceId);
+      allow update: if isAdmin()
+                    || (ownsCommerce(resource.data.commerceId) && !changed().hasAny(['commerceId']))
+                    // reclamar un cupón suma de a un cupo, sin pasar el total
                     || (isAuthenticated()
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedSlots'])
-                        && request.resource.data.usedSlots is int
-                        && resource.data.usedSlots is int
-                        && request.resource.data.usedSlots > resource.data.usedSlots);
-      allow delete: if isAdmin();
+                        && changed().hasOnly(['usedSlots'])
+                        && request.resource.data.usedSlots == resource.data.get('usedSlots', 0) + 1
+                        && (resource.data.get('totalSlots', null) == null
+                            || request.resource.data.usedSlots <= resource.data.totalSlots));
+      allow delete: if isAdmin() || ownsCommerce(resource.data.commerceId);
     }
 
-    // Coupons — create only via Cloud Functions (callable), direct client writes rejected
-    // except the user's own coupon documents with matching userId
+    // Coupons — el usuario reclama los suyos; el comercio los canjea
     match /coupons/{couponId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.keys().hasAll(['userId', 'promotionId', 'commerceId', 'status']);
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin())
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId', 'promotionId', 'commerceId']);
+      allow read: if isAuthenticated()
+                  && (resource.data.userId == request.auth.uid || isAdmin() || ownsCommerce(resource.data.commerceId));
+      allow create: if isAuthenticated()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.status == 'available'
+                    && request.resource.data.keys().hasAll(['userId', 'promotionId', 'commerceId', 'status'])
+                    && get(/databases/$(database)/documents/promotions/$(request.resource.data.promotionId)).data.commerceId
+                       == request.resource.data.commerceId;
+      allow update: if isAdmin()
+                    // el dueño del cupón puede cancelarlo, no canjearlo
+                    || (resource.data.userId == request.auth.uid
+                        && changed().hasOnly(['status', 'updatedAt', 'cancelledAt', 'cancelReason'])
+                        && request.resource.data.status == 'cancelled')
+                    // el comercio canjea los cupones de sus promociones
+                    || (ownsCommerce(resource.data.commerceId)
+                        && !changed().hasAny(['userId', 'promotionId', 'commerceId']));
       allow delete: if isAdmin();
     }
 
@@ -75,24 +123,36 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
-    // User notifications subcollection (written by Cloud Functions, read by app)
+    // User notifications subcollection (read by app)
     match /users/{userId}/notifications/{notId} {
       allow read, delete: if isCurrentUser(userId) || isAdmin();
-      allow create, update: if isAdmin();
+      allow update: if isCurrentUser(userId) || isAdmin();
+      allow create: if isAdmin();
     }
 
-    // Reviews
+    // Reviews — firmadas siempre por quien las escribe
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow delete: if isAdmin();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if (isAuthenticated() && resource.data.userId == request.auth.uid
+                        && !changed().hasAny(['userId', 'commerceId', 'helpfulCount']))
+                    // "me resultó útil": cualquiera suma de a uno
+                    || (isAuthenticated()
+                        && changed().hasOnly(['helpfulCount'])
+                        && request.resource.data.helpfulCount == resource.data.get('helpfulCount', 0) + 1);
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
     }
 
-    // Rewards (public read, admin write)
+    // Rewards
     match /rewards/{rewardId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAdmin() || isBusinessOwner();
+      allow create: if isAdmin() || ownsCommerce(request.resource.data.commerceId);
+      allow update: if isAdmin()
+                    || ownsCommerce(resource.data.commerceId)
+                    // canjear: suma de a uno el contador
+                    || (isAuthenticated()
+                        && changed().hasOnly(['redeemedCount'])
+                        && request.resource.data.redeemedCount == resource.data.get('redeemedCount', 0) + 1);
       allow delete: if isAdmin();
     }
 
@@ -102,14 +162,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Points transactions
+    // Points transactions — solo el admin las crea (no hay forma legítima de
+    // sumarse puntos desde la app)
     match /points_transactions/{txId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated()
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.keys().hasAll(['userId', 'points', 'type', 'createdAt'])
-                    && request.resource.data.points is int
-                    && request.resource.data.points > 0;
+      allow create: if isAdmin()
+                    || (isAuthenticated()
+                        && request.resource.data.userId == request.auth.uid
+                        && request.resource.data.points is int
+                        && request.resource.data.points < 0);
       allow update, delete: if isAdmin();
     }
 
@@ -118,28 +179,28 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isAuthenticated()
                     && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.keys().hasAll(['userId', 'rewardId', 'pointsCost', 'createdAt']);
+                    && request.resource.data.keys().hasAll(['userId', 'rewardId', 'createdAt']);
       allow update, delete: if isAdmin();
     }
 
-    // Payment logs (admin only)
+    // Payment logs (admin only; los escribirían las Cloud Functions)
     match /payment_logs/{logId} {
-      allow read: if isAdmin();
-      allow create: if isAuthenticated();
-      allow update, delete: if isAdmin();
+      allow read, write: if isAdmin();
     }
 
     // Coupon redemptions
     match /coupon_redemptions/{redemptionId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated();
+      allow read: if isAuthenticated()
+                  && (resource.data.get('userId', '') == request.auth.uid || isAdmin()
+                      || ownsCommerce(resource.data.get('commerceId', '')));
+      allow create: if isAuthenticated()
+                    && (isAdmin() || ownsCommerce(request.resource.data.commerceId));
       allow update, delete: if isAdmin();
     }
 
     // Config (plans, settings) - admin read/write
     match /config/{docId} {
-      allow read: if isAdmin();
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
 
     // Analytics (write only via CF)

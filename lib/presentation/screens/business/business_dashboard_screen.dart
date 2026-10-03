@@ -10,7 +10,6 @@ import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/commerce_entity.dart';
-import '../../../domain/entities/user_entity.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../../services/ambulant_location_service.dart';
 import '../../../services/image_upload_service.dart';
@@ -1546,9 +1545,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final isAdmin = authState is AuthAuthenticated &&
-        (authState.user.role == UserRole.admin ||
-            authState.user.role == UserRole.superAdmin);
+    final isAdmin = authState is AuthAuthenticated && authState.user.isAdmin;
 
     if (!isAdmin) {
       final existing = await FirebaseFirestore.instance

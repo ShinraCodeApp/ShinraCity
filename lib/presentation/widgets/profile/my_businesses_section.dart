@@ -20,9 +20,7 @@ class MyBusinessesSection extends StatefulWidget {
 class _MyBusinessesSectionState extends State<MyBusinessesSection> {
   final _db = FirebaseFirestore.instance;
 
-  bool get _isAdmin =>
-      widget.user.role == UserRole.admin ||
-      widget.user.role == UserRole.superAdmin;
+  bool get _isAdmin => widget.user.isAdmin;
 
   Stream<QuerySnapshot> get _businessStream => _db
       .collection(AppConstants.commercesCollection)

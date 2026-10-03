@@ -13,6 +13,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/geo_utils.dart';
 import '../../../domain/entities/commerce_entity.dart';
+import '../../../domain/entities/user_entity.dart';
 import '../../../services/image_upload_service.dart';
 
 class RegisterBusinessScreen extends StatefulWidget {
@@ -279,10 +280,10 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
         galleryUrls.add(url);
       }
 
-      // Check if user is admin
+      // Solo el super admin (por email, igual que las reglas de Firestore)
       final userDoc = await _db.collection(AppConstants.usersCollection).doc(uid).get();
       final role = userDoc.data()?['role'] as String? ?? 'user';
-      final isAdmin = role == 'admin' || role == 'superAdmin';
+      final isAdmin = isSuperAdminEmail(FirebaseAuth.instance.currentUser?.email);
 
       final data = {
         'name': _name.text.trim(),
@@ -331,8 +332,8 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
             .collection(AppConstants.commercesCollection)
             .doc(docId)
             .set(data);
-        // Promote user to businessOwner so Firestore rules allow promotion creation
-        if (!isAdmin) {
+        // Pasa a businessOwner (las reglas solo permiten el salto user -> businessOwner)
+        if (!isAdmin && role == 'user') {
           await _db
               .collection(AppConstants.usersCollection)
               .doc(uid)

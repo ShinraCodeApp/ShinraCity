@@ -443,6 +443,12 @@
 <script>
 const db = firebase.firestore();
 const auth = firebase.auth();
+// Escapa texto que escriben los usuarios antes de meterlo en innerHTML (evita que
+// un nombre con <script> o <img onerror> se ejecute con la sesión del admin).
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch]);
+}
+
 let currentAdmin = null;
 
 // ════ AUTH ════
@@ -450,8 +456,8 @@ auth.onAuthStateChanged(async user => {
   if (!user) { showLogin(); return; }
   try {
     const doc = await db.collection('users').doc(user.uid).get();
-    const role = doc.data()?.role;
-    if (role !== 'admin' && role !== 'superAdmin') {
+    // único admin, por email (igual que firestore.rules y server.js)
+    if ((user.email || '').toLowerCase() !== 'admin@shinracity.com') {
       showToast('Sin permisos de administrador', 'error');
       auth.signOut(); return;
     }
@@ -551,14 +557,14 @@ async function loadOverview() {
     const recU = [...uSnap.docs].sort((a,b) => (b.data().createdAt?.seconds||0)-(a.data().createdAt?.seconds||0)).slice(0,6);
     document.getElementById('recent-users-tbody').innerHTML = recU.map(d => {
       const u = d.data();
-      return `<tr><td><div class="td-name">${u.displayName||'Sin nombre'}</div></td><td>${roleBadge(u.role)}</td><td class="td-sec">${(u.points||0).toLocaleString()}</td><td>${u.isSuspended?'<span class="badge badge-error">Suspendido</span>':'<span class="badge badge-success">Activo</span>'}</td></tr>`;
+      return `<tr><td><div class="td-name">${esc(u.displayName||'Sin nombre')}</div></td><td>${roleBadge(u.role)}</td><td class="td-sec">${(u.points||0).toLocaleString()}</td><td>${u.isSuspended?'<span class="badge badge-error">Suspendido</span>':'<span class="badge badge-success">Activo</span>'}</td></tr>`;
     }).join('') || emptyRow(4,'Sin usuarios');
 
     // Recent businesses
     const recB = [...bSnap.docs].sort((a,b) => (b.data().createdAt?.seconds||0)-(a.data().createdAt?.seconds||0)).slice(0,6);
     document.getElementById('recent-biz-tbody').innerHTML = recB.map(d => {
       const b = d.data();
-      return `<tr><td><div class="td-name">${b.name||'Sin nombre'}</div><div class="td-sec" style="font-size:10px">${b.city||''}</div></td><td>${planBadge(b.plan)}</td><td>${statusBadge(b.status)}</td></tr>`;
+      return `<tr><td><div class="td-name">${esc(b.name||'Sin nombre')}</div><div class="td-sec" style="font-size:10px">${esc(b.city||'')}</div></td><td>${planBadge(b.plan)}</td><td>${statusBadge(b.status)}</td></tr>`;
     }).join('') || emptyRow(3,'Sin negocios');
   } catch(e) { showToast('Error cargando: '+e.message,'error'); }
 }
@@ -593,8 +599,8 @@ function renderUsers() {
 
   document.getElementById('users-tbody').innerHTML = page.map(u => `
     <tr>
-      <td><div class="td-name">${u.displayName||'Sin nombre'}</div><div class="td-sec" style="font-size:10px">UID: ${u.id.slice(0,10)}…</div></td>
-      <td><div style="font-size:11px;color:var(--text-sec)">${u.email||'—'}</div></td>
+      <td><div class="td-name">${esc(u.displayName||'Sin nombre')}</div><div class="td-sec" style="font-size:10px">UID: ${u.id.slice(0,10)}…</div></td>
+      <td><div style="font-size:11px;color:var(--text-sec)">${esc(u.email||'—')}</div></td>
       <td>${roleBadge(u.role)}</td>
       <td class="td-sec">${(u.totalPoints||u.points||0).toLocaleString()}</td>
       <td>${u.isSuspended?'<span class="badge badge-error">🚫 Suspendido</span>':'<span class="badge badge-success">✅ Activo</span>'}</td>
@@ -607,7 +613,7 @@ function renderUsers() {
             : `<button class="action-btn btn-danger"  onclick="setUserSuspend('${u.id}',true)">🚫 Suspender</button>`}
           ${(u.role==='admin'||u.role==='superAdmin')
             ? `<button class="action-btn btn-ghost"  onclick="setAdmin('${u.id}',false)">👤 Quitar admin</button>`
-            : `<button class="action-btn btn-ghost" onclick="setAdmin('${u.id}',true)">👑 Admin</button>`}
+            : ''}
         </div>
       </td>
     </tr>`).join('');
@@ -678,12 +684,12 @@ function renderBiz() {
       : ((b.ownerId||'').slice(0,10)+'…' || '—');
     return `
     <tr>
-      <td><div class="td-name">${b.name||'Sin nombre'}</div><div class="td-sec" style="font-size:10px">ID: ${b.id.slice(0,10)}…</div></td>
+      <td><div class="td-name">${esc(b.name||'Sin nombre')}</div><div class="td-sec" style="font-size:10px">ID: ${b.id.slice(0,10)}…</div></td>
       <td class="td-sec">${CAT_EMOJI[b.category]||'📦'} ${b.category||'—'}</td>
-      <td class="td-sec">${b.city||'—'}</td>
+      <td class="td-sec">${esc(b.city||'—')}</td>
       <td>${planBadge(b.plan)}</td>
       <td>${statusBadge(b.status)}</td>
-      <td class="td-sec" style="font-size:11px">${ownerLabel}${owner?.email && owner.displayName ? `<div style="font-size:10px;color:var(--text-sec)">${owner.email}</div>` : ''}</td>
+      <td class="td-sec" style="font-size:11px">${ownerLabel}${owner?.email && owner.displayName ? `<div style="font-size:10px;color:var(--text-sec)">${esc(owner.email)}</div>` : ''}</td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
           <button class="action-btn btn-accent" onclick="openEditBiz('${b.id}')">✏️ Editar</button>
@@ -774,7 +780,7 @@ async function loadConfig() {
   document.getElementById('prices-grid').innerHTML = PLANS.map(p => `
     <div class="price-card ${p.featured?'featured':''}">
       <div style="font-size:26px;margin-bottom:6px">${p.emoji}</div>
-      <div class="price-plan-name">${p.name}</div>
+      <div class="price-plan-name">${esc(p.name)}</div>
       <div class="price-plan-desc">${p.desc}</div>
       <div class="price-field-group">
         <div class="price-field-label">Precio mensual (ARS)</div>
@@ -784,7 +790,7 @@ async function loadConfig() {
         <div class="price-field-label">Precio anual por mes (ARS)</div>
         <div class="price-input-wrap"><span class="price-currency">$</span><input class="price-input" type="number" id="p-${p.key}-a" value="${data[p.key]?.annual??p.da}"></div>
       </div>
-      <button class="btn-save-price" onclick="savePrice('${p.key}','${p.name}')">💾 Guardar ${p.name}</button>
+      <button class="btn-save-price" onclick="savePrice('${p.key}','${esc(p.name)}')">💾 Guardar ${esc(p.name)}</button>
     </div>`).join('');
 }
 
@@ -812,7 +818,7 @@ async function loadCoupons() {
       return `<tr>
         <td class="td-sec">${fmtDate(c.redeemedAt||c.createdAt)}</td>
         <td class="td-sec" style="font-size:10px">${(c.userId||'').slice(0,12)}…</td>
-        <td class="td-name">${c.couponTitle||c.couponId?.slice(0,10)||'—'}</td>
+        <td class="td-name">${esc(c.couponTitle||c.couponId?.slice(0,10)||'—')}</td>
         <td class="td-sec" style="font-size:10px">${(c.commerceId||'').slice(0,10)}…</td>
         <td><span class="badge badge-primary">+${c.pointsEarned||0} pts</span></td>
       </tr>`;
@@ -977,7 +983,7 @@ async function loadBizPromos(bizId) {
       const active = p.status === 'active' || p.isActive === true;
       return `<div style="background:var(--bg-surface);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title || 'Sin título'}</div>
+          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.title || 'Sin título')}</div>
           <div style="font-size:11px;color:var(--text-sec);margin-top:2px">${p.type || ''} · Vence: ${end} · ${p.usedSlots||0}/${p.totalSlots||'∞'} cupos</div>
         </div>
         <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${active?'#10B98122':'#EF444422'};color:${active?'var(--success)':'var(--error)'}">
@@ -1165,7 +1171,7 @@ async function loadBizReviews(bizId) {
     return `<div style="background:var(--bg-surface);border-radius:10px;padding:12px 14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div>
-          <span style="font-size:13px;font-weight:600">${r.userName || 'Usuario'}</span>
+          <span style="font-size:13px;font-weight:600">${esc(r.userName || 'Usuario')}</span>
           <span style="font-size:12px;margin-left:8px">${stars(r.rating||0)}</span>
           <span style="font-size:11px;color:var(--text-sec);margin-left:8px">${r.rating||0}/5</span>
         </div>
@@ -1174,7 +1180,7 @@ async function loadBizReviews(bizId) {
           <button onclick="deleteReview('${doc.id}')" style="padding:3px 8px;background:rgba(239,68,68,.15);border:none;border-radius:5px;color:var(--error);font-size:11px;cursor:pointer">🗑️</button>
         </div>
       </div>
-      ${r.comment ? `<p style="font-size:12px;color:var(--text-sec);margin:0">${r.comment}</p>` : ''}
+      ${r.comment ? `<p style="font-size:12px;color:var(--text-sec);margin:0">${esc(r.comment)}</p>` : ''}
     </div>`;
   }).join('');
 }
@@ -1470,8 +1476,8 @@ async function loadMap() {
       const marker = L.marker([lat, lng], {icon});
       marker.bindPopup(`
         <div style="font-family:Inter,sans-serif;min-width:190px">
-          <div style="font-weight:700;font-size:14px;margin-bottom:3px">${emoji} ${b.name || '—'}</div>
-          <div style="font-size:11px;color:#888;margin-bottom:6px">${b.city || ''} · ${planBadge(b.plan)}</div>
+          <div style="font-weight:700;font-size:14px;margin-bottom:3px">${emoji} ${esc(b.name || '—')}</div>
+          <div style="font-size:11px;color:#888;margin-bottom:6px">${esc(b.city || '')} · ${planBadge(b.plan)}</div>
           <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
             ${statusBadge(b.status)}
             ${isAmbulant ? '<span style="font-size:11px;background:#FF980022;color:#FF9800;padding:2px 7px;border-radius:4px;font-weight:600">🚶 Ambulante</span>' : ''}
@@ -1501,7 +1507,7 @@ async function loadMap() {
           const liveMarker = L.marker([llat, llng], {icon: liveIcon});
           liveMarker.bindPopup(`
             <div style="font-family:Inter,sans-serif;min-width:190px">
-              <div style="font-weight:700;font-size:14px;margin-bottom:3px">📍 ${b.name || '—'} · celular</div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:3px">📍 ${esc(b.name || '—')} · celular</div>
               <div style="font-size:11px;color:${liveColor};font-weight:600">${isStale ? '⚠️ Señal antigua' : '🟢 En vivo'} · hace ${ago}</div>
             </div>`);
           _liveMarkersLayer.addLayer(liveMarker);
@@ -1528,8 +1534,8 @@ async function loadMap() {
       const uMarker = L.marker([lat, lng], {icon: uIcon});
       uMarker.bindPopup(`
         <div style="font-family:Inter,sans-serif;min-width:150px">
-          <div style="font-weight:700;font-size:13px;margin-bottom:3px">${u.displayName || 'Usuario'}</div>
-          <div style="font-size:11px;color:#888">${u.email || ''}</div>
+          <div style="font-weight:700;font-size:13px;margin-bottom:3px">${esc(u.displayName || 'Usuario')}</div>
+          <div style="font-size:11px;color:#888">${esc(u.email || '')}</div>
           <div style="margin-top:5px">${roleBadge(u.role)}</div>
         </div>`);
       _userMarkersLayer.addLayer(uMarker);

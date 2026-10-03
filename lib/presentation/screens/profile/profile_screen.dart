@@ -497,7 +497,7 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 );
               }),
-              if (user.role == UserRole.admin || user.role == UserRole.superAdmin) ...[
+              if (user.isAdmin) ...[
                 const Divider(color: Color(0xFF1E293B), height: 1, indent: 0),
                 ListTile(
                   leading: Container(

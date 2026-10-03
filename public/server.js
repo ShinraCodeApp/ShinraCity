@@ -43,6 +43,8 @@ try {
   console.error('Firebase Admin init FAILED:', e.message);
 }
 
+const SUPER_ADMIN_EMAIL = 'admin@shinracity.com';
+
 async function verifyAdmin(req, res, next) {
   if (!admin.apps.length)
     return res.status(503).json({ error: 'Servidor no configurado. Contactá al desarrollador.' });
@@ -50,9 +52,9 @@ async function verifyAdmin(req, res, next) {
   if (!token) return res.status(401).json({ error: 'Sin token' });
   try {
     const decoded = await admin.auth().verifyIdToken(token);
-    const snap    = await admin.firestore().collection('users').doc(decoded.uid).get();
-    const role    = snap.data()?.role || '';
-    if (role !== 'admin' && role !== 'superAdmin')
+    // Único admin, por email (igual que firestore.rules). El campo `role` del
+    // perfil no sirve: antes cualquiera podía escribirlo al registrarse.
+    if ((decoded.email || '').toLowerCase() !== SUPER_ADMIN_EMAIL)
       return res.status(403).json({ error: 'No autorizado' });
     req.adminUid = decoded.uid;
     next();
@@ -76,50 +78,13 @@ app.post('/api/update-password', verifyAdmin, async (req, res) => {
 app.post('/api/delete-user', verifyAdmin, async (req, res) => {
   const { uid } = req.body;
   if (!uid) return res.status(400).json({ error: 'UID requerido' });
+  if (uid === req.adminUid) return res.status(400).json({ error: 'No podés borrar tu propia cuenta de admin' });
   try {
     await admin.auth().deleteUser(uid);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
-});
-
-// Debug: compare Firestore doc ID vs real Firebase Auth UID
-app.get('/api/debug-me', verifyAdmin, async (req, res) => {
-  try {
-    const authUser = await admin.auth().getUserByEmail('admin@shinracity.com');
-    res.json({
-      tokenUid: req.adminUid,
-      authUidForAdminEmail: authUser.uid,
-      match: req.adminUid === authUser.uid,
-    });
-  } catch(e) {
-    res.json({ tokenUid: req.adminUid, error: e.message });
-  }
-});
-
-// Debug: check if a UID exists in Firebase Auth
-app.get('/api/debug-uid/:uid', verifyAdmin, async (req, res) => {
-  try {
-    const u = await admin.auth().getUser(req.params.uid);
-    res.json({ found: true, uid: u.uid, email: u.email });
-  } catch(e) {
-    res.json({ found: false, code: e.code, message: e.message });
-  }
-});
-
-// Debug: check all Firestore user docs against Firebase Auth
-app.get('/api/debug-all-users', verifyAdmin, async (req, res) => {
-  const snap = await admin.firestore().collection('users').limit(20).get();
-  const results = await Promise.all(snap.docs.map(async doc => {
-    try {
-      const u = await admin.auth().getUser(doc.id);
-      return { firestoreId: doc.id, authFound: true, email: u.email, displayName: u.displayName };
-    } catch(e) {
-      return { firestoreId: doc.id, authFound: false, error: e.code };
-    }
-  }));
-  res.json(results);
 });
 
 app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));

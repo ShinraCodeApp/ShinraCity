@@ -241,8 +241,7 @@ class AppRouter {
           builder: (context, state) {
             final authState = context.read<AuthBloc>().state;
             if (authState is AuthAuthenticated) {
-              final role = authState.user.role.name;
-              if (role == 'admin' || role == 'superAdmin') {
+              if (authState.user.isAdmin) {
                 return const AdminPanelScreen();
               }
             }
