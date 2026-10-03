@@ -13,6 +13,8 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # la misma que se usa en local (intl 0.20.2 depende del SDK)
+          flutter-version: 3.44.2
           cache: true
       - run: flutter pub get
       - run: flutter analyze
