@@ -225,6 +225,63 @@ class FirebaseCouponDatasource {
     });
   }
 
+  /// Cobra los puntos de un cupón que el comercio ya canjeó. Lo hace la app
+  /// del usuario (no hay Cloud Functions); firestore.rules (couponPointsClaim)
+  /// verifica que el cupón sea suyo, esté 'used' y no se haya cobrado.
+  /// Devuelve los puntos sumados (0 si ya estaba cobrado).
+  Future<int> claimCouponPoints({
+    required String userId,
+    required String couponId,
+  }) async {
+    const points = AppConstants.pointsPerCouponRedeemed;
+    return _firestore.runTransaction((t) async {
+      final txRef = _firestore
+          .collection(AppConstants.pointsTransactionsCollection)
+          .doc('coupon_$couponId');
+      if ((await t.get(txRef)).exists) return 0;
+
+      final userRef = _firestore.collection(AppConstants.usersCollection).doc(userId);
+      final user = (await t.get(userRef)).data() ?? {};
+      final total = (user['totalPoints'] as int? ?? 0) + points;
+      final available = (user['availablePoints'] as int? ?? 0) + points;
+      final level = levelForPoints(total);
+
+      t.update(userRef, {
+        'totalPoints': total,
+        'availablePoints': available,
+        'totalCouponsRedeemed': (user['totalCouponsRedeemed'] as int? ?? 0) + 1,
+        'level': level,
+        'lastPointsCouponId': couponId,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      t.set(txRef, {
+        'userId': userId,
+        'points': points,
+        'type': 'earned',
+        'reason': 'Cupón canjeado',
+        'couponId': couponId,
+        'balanceAfter': available,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      // mantener el ranking al día
+      t.set(
+        _firestore.collection(AppConstants.publicProfilesCollection).doc(userId),
+        {'totalPoints': total, 'level': level, 'updatedAt': FieldValue.serverTimestamp()},
+        SetOptions(merge: true),
+      );
+      return points;
+    });
+  }
+
+  static String levelForPoints(int totalPoints) {
+    final t = AppConstants.levelThresholds;
+    if (totalPoints >= t['lifetime']!) return 'lifetime';
+    if (totalPoints >= t['ambassador']!) return 'ambassador';
+    if (totalPoints >= t['exemplary']!) return 'exemplary';
+    if (totalPoints >= t['frequent']!) return 'frequent';
+    return 'explorer';
+  }
+
   Future<List<Map<String, dynamic>>> getUserCoupons({
     required String userId,
     CouponStatus? status,

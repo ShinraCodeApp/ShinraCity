@@ -200,6 +200,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, void>> deleteAccount() async {
     try {
       final user = await _datasource.getCurrentUser();
+      await _datasource.deletePublicData(user.id);
       await _firestore.collection('users').doc(user.id).delete();
       await _datasource.deleteAuthUser();
       return const Right(null);

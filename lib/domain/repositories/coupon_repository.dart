@@ -45,6 +45,13 @@ abstract class CouponRepository {
 
   Stream<List<CouponEntity>> watchUserCoupons(String userId);
 
+  /// Suma los puntos de los cupones ya canjeados que todavía no se cobraron.
+  /// Devuelve el total de puntos sumados.
+  Future<Either<Failure, int>> claimRedemptionPoints({
+    required String userId,
+    required List<String> couponIds,
+  });
+
   Future<Either<Failure, Map<String, dynamic>>> getCouponAnalytics({
     required String commerceId,
     DateTime? startDate,

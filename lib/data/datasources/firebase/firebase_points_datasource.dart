@@ -218,9 +218,9 @@ class FirebasePointsDatasource {
     String? city,
     int limit = 50,
   }) async {
+    // perfiles públicos: los completos solo los lee su dueño
     Query query = _firestore
-        .collection(AppConstants.usersCollection)
-        .where('isActive', isEqualTo: true)
+        .collection(AppConstants.publicProfilesCollection)
         .orderBy('totalPoints', descending: true)
         .limit(limit);
 
@@ -234,7 +234,7 @@ class FirebasePointsDatasource {
         'photoUrl': data['photoUrl'],
         'totalPoints': data['totalPoints'] ?? 0,
         'level': data['level'] ?? 'explorer',
-        'achievementCount': (data['achievementIds'] as List?)?.length ?? 0,
+        'achievementCount': data['achievementCount'] ?? 0,
       };
     }).toList();
   }

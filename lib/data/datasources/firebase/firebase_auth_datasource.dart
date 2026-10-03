@@ -45,42 +45,12 @@ class FirebaseAuthDatasource {
     }
   }
 
-  /// Accepts email, display name, or business name — returns the Firebase Auth email.
+  /// Solo email. Antes buscaba por nombre de usuario o de negocio, pero esa
+  /// búsqueda corre sin sesión y las reglas no dejan leer perfiles ajenos
+  /// (publicar el email de cada usuario sería peor), así que nunca funcionó.
   Future<String> _resolveIdentifier(String input) async {
     if (input.contains('@')) return input;
-
-    // Search by displayName in users collection
-    final byName = await _firestore
-        .collection(AppConstants.usersCollection)
-        .where('displayName', isEqualTo: input)
-        .limit(1)
-        .get();
-    if (byName.docs.isNotEmpty) {
-      final email = byName.docs.first.data()['email'] as String? ?? '';
-      if (email.isNotEmpty) return email;
-    }
-
-    // Search by business name in commerces collection → get owner email
-    final byBiz = await _firestore
-        .collection(AppConstants.commercesCollection)
-        .where('name', isEqualTo: input)
-        .limit(1)
-        .get();
-    if (byBiz.docs.isNotEmpty) {
-      final ownerId = byBiz.docs.first.data()['ownerId'] as String? ?? '';
-      if (ownerId.isNotEmpty) {
-        final ownerDoc = await _firestore
-            .collection(AppConstants.usersCollection)
-            .doc(ownerId)
-            .get();
-        final ownerEmail = ownerDoc.data()?['email'] as String? ?? '';
-        if (ownerEmail.isNotEmpty) return ownerEmail;
-      }
-    }
-
-    throw const AuthFailure(
-      message: 'No encontramos una cuenta con ese usuario o negocio',
-    );
+    throw const AuthFailure(message: 'Ingresá con el email de tu cuenta');
   }
 
   Future<UserModel> signUpWithEmail({
@@ -244,23 +214,75 @@ class FirebaseAuthDatasource {
         .update({'fcmToken': token, 'updatedAt': FieldValue.serverTimestamp()});
   }
 
+  /// El perfil completo solo es legible por su dueño (y el admin); para otros
+  /// usuarios se devuelve el perfil público (sin email ni datos privados).
   Future<UserModel?> getUserById(String uid) async {
+    if (uid == _auth.currentUser?.uid) {
+      final doc = await _firestore
+          .collection(AppConstants.usersCollection)
+          .doc(uid)
+          .get();
+      if (!doc.exists) return null;
+      return UserModel.fromFirestore(doc);
+    }
     final doc = await _firestore
-        .collection(AppConstants.usersCollection)
+        .collection(AppConstants.publicProfilesCollection)
         .doc(uid)
         .get();
     if (!doc.exists) return null;
-    return UserModel.fromFirestore(doc);
+    return UserModel.fromMap({...doc.data()!, 'email': ''}, uid);
   }
 
   Future<UserModel?> getUserByEmail(String email) async {
-    final snap = await _firestore
-        .collection(AppConstants.usersCollection)
-        .where('email', isEqualTo: email)
-        .limit(1)
+    final doc = await _firestore
+        .collection(AppConstants.userEmailsCollection)
+        .doc(email.trim().toLowerCase())
         .get();
-    if (snap.docs.isEmpty) return null;
-    return UserModel.fromFirestore(snap.docs.first);
+    final uid = doc.data()?['uid'] as String?;
+    if (uid == null) return null;
+    final user = await getUserById(uid);
+    return user == null ? null : UserModel.fromMap({..._publicFields(user), 'email': email.trim()}, uid);
+  }
+
+  Map<String, dynamic> _publicFields(UserModel user) => {
+        'displayName': user.displayName,
+        'photoUrl': user.photoUrl,
+        'totalPoints': user.totalPoints,
+        'level': user.level.name,
+        'achievementCount': user.achievementIds.length,
+      };
+
+  /// Publica el perfil público (ranking, empleados) y el índice email -> uid.
+  /// No debe frenar el login si falla.
+  Future<void> _syncPublicData(UserModel user) async {
+    try {
+      final batch = _firestore.batch();
+      batch.set(
+        _firestore.collection(AppConstants.publicProfilesCollection).doc(user.id),
+        {..._publicFields(user), 'updatedAt': FieldValue.serverTimestamp()},
+      );
+      final email = (_auth.currentUser?.email ?? '').trim().toLowerCase();
+      if (email.isNotEmpty) {
+        batch.set(
+          _firestore.collection(AppConstants.userEmailsCollection).doc(email),
+          {'uid': user.id},
+        );
+      }
+      await batch.commit();
+    } catch (_) {}
+  }
+
+  /// Al borrar la cuenta: quita el perfil público y el índice de email.
+  Future<void> deletePublicData(String uid) async {
+    try {
+      final batch = _firestore.batch();
+      batch.delete(_firestore.collection(AppConstants.publicProfilesCollection).doc(uid));
+      final email = (_auth.currentUser?.email ?? '').trim().toLowerCase();
+      if (email.isNotEmpty) {
+        batch.delete(_firestore.collection(AppConstants.userEmailsCollection).doc(email));
+      }
+      await batch.commit();
+    } catch (_) {}
   }
 
   Future<UserModel> _getUserFromFirestore(String uid) async {
@@ -274,7 +296,9 @@ class FirebaseAuthDatasource {
     if ((data['email'] as String? ?? '').isEmpty) {
       data['email'] = _auth.currentUser?.email ?? '';
     }
-    return UserModel.fromMap(data, uid);
+    final user = UserModel.fromMap(data, uid);
+    if (uid == _auth.currentUser?.uid) _syncPublicData(user);
+    return user;
   }
 
   Future<void> _createUserDocument(UserModel user) async {
@@ -282,6 +306,7 @@ class FirebaseAuthDatasource {
         .collection(AppConstants.usersCollection)
         .doc(user.id)
         .set(user.toFirestore());
+    await _syncPublicData(user);
   }
 
   String _generateReferralCode(String uid) {

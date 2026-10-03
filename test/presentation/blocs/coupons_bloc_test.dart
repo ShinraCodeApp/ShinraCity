@@ -11,6 +11,26 @@ import 'package:shinra_city/presentation/blocs/coupons/coupons_bloc.dart';
 
 class MockCouponRepository extends Mock implements CouponRepository {
   @override
+  Stream<List<CouponEntity>> watchUserCoupons(String? userId) =>
+      super.noSuchMethod(
+        Invocation.method(#watchUserCoupons, [userId]),
+        returnValue: const Stream<List<CouponEntity>>.empty(),
+      );
+
+  @override
+  Future<Either<Failure, int>> claimRedemptionPoints({
+    required String? userId,
+    required List<String>? couponIds,
+  }) =>
+      super.noSuchMethod(
+        Invocation.method(#claimRedemptionPoints, [], {
+          #userId: userId,
+          #couponIds: couponIds,
+        }),
+        returnValue: Future<Either<Failure, int>>.value(const Right(0)),
+      );
+
+  @override
   Future<Either<Failure, List<CouponEntity>>> getUserCoupons({
     required String? userId,
     CouponStatus? status,
@@ -294,8 +314,9 @@ void main() {
       setUp: () {
         when(repo.cancelCoupon(couponId: 'cp1', userId: 'u1'))
             .thenAnswer((_) async => const Right(null));
-        when(repo.getUserCoupons(userId: 'u1'))
-            .thenAnswer((_) async => const Right([]));
+        // tras cancelar, el bloc vuelve a escuchar el stream de cupones
+        when(repo.watchUserCoupons('u1'))
+            .thenAnswer((_) => Stream.value(const []));
       },
       act: (bloc) => bloc.add(CancelCouponEvent(couponId: 'cp1')),
       expect: () => [

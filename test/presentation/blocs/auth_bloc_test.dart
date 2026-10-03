@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shinra_city/core/errors/failures.dart';
 import 'package:shinra_city/domain/entities/user_entity.dart';
 import 'package:shinra_city/presentation/blocs/auth/auth_bloc.dart';
@@ -38,6 +39,8 @@ void main() {
   );
 
   setUp(() {
+    // AppStarted lee 'keep_logged_in' de SharedPreferences
+    SharedPreferences.setMockInitialValues({});
     mockRepo = MockAuthRepository();
     // authStateChanges stream requerido en el constructor
     when(mockRepo.authStateChanges).thenAnswer((_) => const Stream.empty());
@@ -251,14 +254,14 @@ void main() {
 
   group('SendPasswordResetEvent', () {
     blocTest<AuthBloc, AuthState>(
-      'no emite ningún estado — solo llama sendPasswordResetEmail',
+      'emite [AuthPasswordResetSent] al enviar el email',
       build: () {
         when(mockRepo.sendPasswordResetEmail(any))
             .thenAnswer((_) async => const Right(null));
         return bloc;
       },
       act: (b) => b.add(SendPasswordResetEvent(email: 'test@test.com')),
-      expect: () => [],
+      expect: () => [isA<AuthPasswordResetSent>()],
     );
   });
 

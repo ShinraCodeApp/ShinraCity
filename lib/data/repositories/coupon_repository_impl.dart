@@ -163,6 +163,22 @@ class CouponRepositoryImpl implements CouponRepository {
   }
 
   @override
+  Future<Either<Failure, int>> claimRedemptionPoints({
+    required String userId,
+    required List<String> couponIds,
+  }) async {
+    try {
+      var total = 0;
+      for (final id in couponIds) {
+        total += await _datasource.claimCouponPoints(userId: userId, couponId: id);
+      }
+      return Right(total);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, Map<String, dynamic>>> getCouponAnalytics({
     required String commerceId,
     DateTime? startDate,

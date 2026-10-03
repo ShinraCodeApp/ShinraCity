@@ -27,21 +27,62 @@ service cloud.firestore {
     }
 
     // Campos del perfil que el usuario no puede tocar: los maneja el admin.
-    // Los puntos no tienen ninguna forma legítima de sumarse desde la app
-    // (no hay Cloud Functions publicadas), así que nadie puede subírselos.
+    // Los puntos solo se suman por la vía de couponPointsClaim (abajo).
     function protectedUserFields() {
       return ['role', 'isActive', 'isSuspended', 'isVerified', 'totalPoints', 'level',
-              'totalCouponsRedeemed', 'totalSavings', 'badgeIds', 'achievementIds'];
+              'totalCouponsRedeemed', 'totalSavings', 'badgeIds', 'achievementIds',
+              'lastPointsCouponId'];
+    }
+
+    // Puntos por cupón canjeado (AppConstants.pointsPerCouponRedeemed)
+    function couponPoints() {
+      return 10;
+    }
+
+    // Igual que AppConstants.levelThresholds
+    function levelFor(points) {
+      return points >= 15000 ? 'lifetime'
+           : points >= 5000 ? 'ambassador'
+           : points >= 2000 ? 'exemplary'
+           : points >= 500 ? 'frequent'
+           : 'explorer';
+    }
+
+    function pointsTxPath(couponId) {
+      return /databases/$(database)/documents/points_transactions/$('coupon_' + couponId);
+    }
+
+    // Cobrar los puntos de un cupón: el cupón es del usuario, el comercio ya lo
+    // canjeó ('used'), y se crea en la misma escritura el movimiento
+    // points_transactions/coupon_{id}, que no existía. Como ese movimiento no
+    // se puede borrar ni editar, cada cupón paga una sola vez.
+    function couponPointsClaim(userId) {
+      let couponId = request.resource.data.lastPointsCouponId;
+      let coupon = get(/databases/$(database)/documents/coupons/$(couponId)).data;
+      let total = resource.data.get('totalPoints', 0) + couponPoints();
+      return changed().hasOnly(['totalPoints', 'availablePoints', 'level', 'totalCouponsRedeemed',
+                                'lastPointsCouponId', 'updatedAt'])
+          && coupon.userId == userId
+          && coupon.status == 'used'
+          && !exists(pointsTxPath(couponId))
+          && existsAfter(pointsTxPath(couponId))
+          && request.resource.data.totalPoints == total
+          && request.resource.data.availablePoints == resource.data.get('availablePoints', 0) + couponPoints()
+          && request.resource.data.totalCouponsRedeemed == resource.data.get('totalCouponsRedeemed', 0) + 1
+          && request.resource.data.level == levelFor(total);
     }
 
     // Users
     match /users/{userId} {
       allow read: if isCurrentUser(userId) || isAdmin();
-      // un perfil nuevo nace como usuario común y sin puntos
+      // un perfil nuevo nace sin puntos ni verificación; 'businessOwner' no da
+      // permisos (todo se decide por ser dueño del comercio)
       allow create: if isCurrentUser(userId)
-                    && request.resource.data.get('role', 'user') == 'user'
+                    && request.resource.data.get('role', 'user') in ['user', 'businessOwner']
                     && request.resource.data.get('totalPoints', 0) == 0
                     && request.resource.data.get('availablePoints', 0) == 0
+                    && request.resource.data.get('totalCouponsRedeemed', 0) == 0
+                    && request.resource.data.get('level', 'explorer') == 'explorer'
                     && request.resource.data.get('isVerified', false) == false;
       allow update: if isAdmin()
                     || (isCurrentUser(userId)
@@ -49,12 +90,41 @@ service cloud.firestore {
                         // availablePoints solo puede bajar (canje de recompensas)
                         && (!changed().hasAny(['availablePoints'])
                             || request.resource.data.availablePoints < resource.data.availablePoints))
+                    || (isCurrentUser(userId) && couponPointsClaim(userId))
                     // al registrar su comercio, el usuario pasa de 'user' a 'businessOwner' (y nada más)
                     || (isCurrentUser(userId)
                         && changed().hasOnly(['role', 'updatedAt'])
                         && resource.data.role == 'user'
                         && request.resource.data.role == 'businessOwner');
       allow delete: if isCurrentUser(userId) || isAdmin();
+    }
+
+    // Perfil público (ranking y lista de empleados): sin email ni datos
+    // privados. Los puntos y el nivel tienen que coincidir con el perfil real.
+    match /public_profiles/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin()
+                    || (isCurrentUser(userId)
+                        && request.resource.data.keys().hasOnly(['displayName', 'photoUrl', 'totalPoints',
+                                                                  'level', 'achievementCount', 'updatedAt'])
+                        && request.resource.data.totalPoints
+                           == getAfter(/databases/$(database)/documents/users/$(userId)).data.get('totalPoints', 0)
+                        && request.resource.data.level
+                           == getAfter(/databases/$(database)/documents/users/$(userId)).data.get('level', 'explorer'));
+      allow delete: if isCurrentUser(userId) || isAdmin();
+    }
+
+    // email (en minúsculas) -> uid, para que un comercio agregue empleados.
+    // Solo se puede leer conociendo el email exacto; no se puede listar.
+    match /user_emails/{email} {
+      allow get: if isAuthenticated();
+      allow list: if isAdmin();
+      allow create, update: if isAuthenticated()
+                    && request.auth.token.email != null
+                    && email == request.auth.token.email.lower()
+                    && request.resource.data.keys().hasOnly(['uid'])
+                    && request.resource.data.uid == request.auth.uid;
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
     }
 
     // Commerces
@@ -162,15 +232,25 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Points transactions — solo el admin las crea (no hay forma legítima de
-    // sumarse puntos desde la app)
+    // Points transactions — el usuario solo registra gastos (puntos < 0) o el
+    // cobro de un cupón canjeado (coupon_{id}, ver couponPointsClaim)
     match /points_transactions/{txId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      // get de un id inexistente: la app lo consulta antes de cobrar un cupón
+      allow get: if isAuthenticated()
+                 && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isAdmin()
                     || (isAuthenticated()
                         && request.resource.data.userId == request.auth.uid
                         && request.resource.data.points is int
-                        && request.resource.data.points < 0);
+                        && request.resource.data.points < 0)
+                    || (isAuthenticated()
+                        && request.resource.data.userId == request.auth.uid
+                        && txId == 'coupon_' + request.resource.data.couponId
+                        && request.resource.data.points == couponPoints()
+                        && request.resource.data.type == 'earned'
+                        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.lastPointsCouponId
+                           == request.resource.data.couponId);
       allow update, delete: if isAdmin();
     }
 
@@ -198,8 +278,21 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // Config (plans, settings) - admin read/write
+    // Config (plans, settings) - admin read/write; los precios de los planes
+    // los ve cualquier comercio (pantalla "Mejorar plan")
     match /config/{docId} {
+      allow read: if isAdmin() || (isAuthenticated() && docId == 'plans');
+      allow write: if isAdmin();
+    }
+
+    // Herramientas del panel de admin
+    match /audit_logs/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /fraud_flags/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /moderation_queue/{docId} {
       allow read, write: if isAdmin();
     }
 

@@ -171,6 +171,19 @@ class CouponsBloc extends Bloc<CouponsEvent, CouponsState> {
     _lastCoupons = event.coupons;
     _initialLoad = false;
     emit(CouponsLoaded(event.coupons));
+    _claimPointsForUsedCoupons(event.coupons);
+  }
+
+  /// Cupones canjeados por el comercio: cobrar sus puntos (una vez por
+  /// sesión cada uno; si ya estaban cobrados no suma nada).
+  final Set<String> _pointsChecked = {};
+  void _claimPointsForUsedCoupons(List<CouponEntity> coupons) {
+    final ids = coupons
+        .where((c) => c.status == CouponStatus.used && _pointsChecked.add(c.id))
+        .map((c) => c.id)
+        .toList();
+    if (ids.isEmpty) return;
+    _couponRepository.claimRedemptionPoints(userId: _userId, couponIds: ids);
   }
 
   Future<void> _onLoadUserCoupons(

@@ -31,6 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
   bool _usedEmailLogin = false;
+  bool _usedBiometricLogin = false;
 
   @override
   void initState() {
@@ -65,6 +66,16 @@ class _LoginScreenState extends State<LoginScreen> {
             final prefs = await SharedPreferences.getInstance();
             await prefs.setBool('keep_logged_in', _rememberMe);
 
+            // Huella ya activa y entró a mano: guardar la contraseña actual por
+            // si la cambió desde otro lado.
+            if (_usedEmailLogin && _biometricEnabled) {
+              await _biometricService.saveCredentials(
+                email: _identifierController.text.trim(),
+                password: _passwordController.text,
+              );
+            }
+            _usedBiometricLogin = false;
+
             // Si el login fue con email/password y biometría no está habilitada aún, ofrecer
             if (_usedEmailLogin && _biometricAvailable && !_biometricEnabled && context.mounted) {
               final enabled = await _showEnableBiometricDialog(context);
@@ -97,9 +108,20 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             );
           } else if (state is AuthError) {
+            // La contraseña guardada para la huella ya no sirve (la cambió o
+            // la cuenta no existe): se borra y tiene que entrar a mano.
+            final staleBiometric = _usedBiometricLogin;
+            if (staleBiometric) {
+              _usedBiometricLogin = false;
+              await _biometricService.disable();
+              if (mounted) setState(() => _biometricEnabled = false);
+            }
+            if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message),
+                content: Text(staleBiometric
+                    ? 'No se pudo ingresar con la huella. Ingresá con tu contraseña.'
+                    : state.message),
                 backgroundColor: AppColors.error,
                 behavior: SnackBarBehavior.floating,
               ),
@@ -211,11 +233,11 @@ class _LoginScreenState extends State<LoginScreen> {
             label: 'Email',
             hint: 'juan@mail.com',
             prefixIcon: Icons.person_outline,
-            keyboardType: TextInputType.text,
+            keyboardType: TextInputType.emailAddress,
             validator: (value) {
-              if (value?.trim().isEmpty ?? true) {
-                return 'Ingresá tu email, nombre de usuario o negocio';
-              }
+              final v = value?.trim() ?? '';
+              if (v.isEmpty) return 'Ingresá tu email';
+              if (!v.contains('@')) return 'Ingresá el email de tu cuenta';
               return null;
             },
           ),
@@ -421,6 +443,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     _usedEmailLogin = false; // ya tiene huella habilitada, no ofrecer de nuevo
+    _usedBiometricLogin = true;
     context.read<AuthBloc>().add(SignInWithEmailEvent(
       email: credentials['email']!,
       password: credentials['password']!,
