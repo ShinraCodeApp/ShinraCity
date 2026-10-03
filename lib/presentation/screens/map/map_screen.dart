@@ -1,5 +1,4 @@
 ﻿import 'dart:async';
-import 'dart:math' show pi;
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -46,17 +45,22 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   Timer? _cameraDebounce;
   DateTime? _lastNearbyNotification;
 
+  // CARTO's free anonymous basemap tiles now require an API key, so dark
+  // mode is faked with a color-inversion filter over plain OSM tiles —
+  // no external key or paid service needed.
+  static const _darkMapFilter = ColorFilter.matrix(<double>[
+    -1, 0, 0, 0, 255,
+    0, -1, 0, 0, 255,
+    0, 0, -1, 0, 255,
+    0, 0, 0, 1, 0,
+  ]);
+
   String get _tileUrl {
     if (_isSatellite) {
       return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
     }
-    return _isMapDark
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   }
-
-  List<String> get _subdomains =>
-      (_isMapDark && !_isSatellite) ? const ['a', 'b', 'c', 'd'] : const [];
 
   @override
   void initState() {
@@ -77,9 +81,27 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _initializeLocation() async {
-    final permission = await Geolocator.checkPermission();
+    var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
-      await Geolocator.requestPermission();
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        context.read<MapBloc>().add(LoadNearbyCommerces(location: _currentPosition));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Activá la ubicación en Ajustes para ver comercios cerca tuyo'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'Ajustes',
+              onPressed: () => Geolocator.openAppSettings(),
+            ),
+          ),
+        );
+      }
+      return;
     }
 
     try {
@@ -157,6 +179,22 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         if (state is MapLoaded) {
           _updateMarkers(state.commerces, state.promotions);
         }
+        if (state is MapError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: 'Reintentar',
+                textColor: Colors.white,
+                onPressed: () => context.read<MapBloc>().add(
+                      LoadNearbyCommerces(location: _currentPosition),
+                    ),
+              ),
+            ),
+          );
+        }
       },
       child: FlutterMap(
         mapController: _mapController,
@@ -170,11 +208,19 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           onPositionChanged: _onCameraMove,
         ),
         children: [
-          TileLayer(
-            urlTemplate: _tileUrl,
-            subdomains: _subdomains,
-            userAgentPackageName: 'com.shinracity.app',
-          ),
+          if (_isMapDark && !_isSatellite)
+            ColorFiltered(
+              colorFilter: _darkMapFilter,
+              child: TileLayer(
+                urlTemplate: _tileUrl,
+                userAgentPackageName: 'com.shinracity.app',
+              ),
+            )
+          else
+            TileLayer(
+              urlTemplate: _tileUrl,
+              userAgentPackageName: 'com.shinracity.app',
+            ),
           CircleLayer(circles: _circles),
           MarkerLayer(markers: _markers),
           MarkerLayer(
@@ -347,19 +393,39 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       case CommerceCategory.fastFood:      return const Color(0xFFFF8F00);
       case CommerceCategory.bar:           return const Color(0xFF5D4037);
       case CommerceCategory.bakery:        return const Color(0xFFFFB300);
+      case CommerceCategory.iceCream:      return const Color(0xFFF06292);
+      case CommerceCategory.butcher:       return const Color(0xFFC62828);
+      case CommerceCategory.greengrocer:   return const Color(0xFF7CB342);
+      case CommerceCategory.kiosk:         return const Color(0xFFFBC02D);
       case CommerceCategory.pharmacies:    return const Color(0xFF43A047);
       case CommerceCategory.health:        return const Color(0xFFEF5350);
       case CommerceCategory.beauty:        return const Color(0xFFE91E63);
+      case CommerceCategory.veterinary:    return const Color(0xFF26A69A);
+      case CommerceCategory.opticians:     return const Color(0xFF5C6BC0);
+      case CommerceCategory.gym:           return const Color(0xFFEF6C00);
       case CommerceCategory.clothing:      return const Color(0xFF9C27B0);
       case CommerceCategory.supermarket:   return const Color(0xFF388E3C);
       case CommerceCategory.hardware:      return const Color(0xFF78909C);
       case CommerceCategory.jewelry:       return const Color(0xFFFFD600);
       case CommerceCategory.market:        return const Color(0xFF66BB6A);
+      case CommerceCategory.furniture:     return const Color(0xFF795548);
+      case CommerceCategory.electronics:   return const Color(0xFF3949AB);
+      case CommerceCategory.bookstore:     return const Color(0xFF6D4C41);
+      case CommerceCategory.toyStore:      return const Color(0xFFFFA726);
+      case CommerceCategory.babyStore:     return const Color(0xFF4FC3F7);
+      case CommerceCategory.florist:       return const Color(0xFFEC407A);
+      case CommerceCategory.constructionMaterials: return const Color(0xFFA1887F);
+      case CommerceCategory.automotive:    return const Color(0xFFFF5722);
+      case CommerceCategory.autoPartsRepair: return const Color(0xFFBF360C);
+      case CommerceCategory.tireShop:      return const Color(0xFF424242);
+      case CommerceCategory.carWash:       return const Color(0xFF03A9F4);
+      case CommerceCategory.bikeShop:      return const Color(0xFF8BC34A);
       case CommerceCategory.streetVendor:  return const Color(0xFFFF9800);
       case CommerceCategory.entrepreneur:  return const Color(0xFF00E5FF);
       case CommerceCategory.artisans:      return const Color(0xFFD4A853);
       case CommerceCategory.services:      return const Color(0xFF607D8B);
-      case CommerceCategory.automotive:    return const Color(0xFFFF5722);
+      case CommerceCategory.laundry:       return const Color(0xFF81D4FA);
+      case CommerceCategory.realEstate:    return const Color(0xFF00695C);
       case CommerceCategory.education:     return const Color(0xFF3F51B5);
       case CommerceCategory.technology:    return const Color(0xFF2196F3);
       case CommerceCategory.entertainment: return const Color(0xFF673AB7);
@@ -385,7 +451,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       final isAmbulant = commerce.isAmbulant;
       final size = hasPromo ? 50.0 : (isAmbulant ? 44.0 : 38.0);
 
-      // Ambulant vendors show at their live location when available
+      // Ambulant vendors walk around, so customers see them move in real time.
+      // Fixed businesses always stay at the location the owner set.
       final markerPoint = (isAmbulant && commerce.liveLocation != null)
           ? commerce.liveLocation!
           : commerce.location;
@@ -530,19 +597,39 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       case CommerceCategory.fastFood:      return Icons.fastfood;
       case CommerceCategory.bar:           return Icons.sports_bar;
       case CommerceCategory.bakery:        return Icons.bakery_dining;
+      case CommerceCategory.iceCream:      return Icons.icecream;
+      case CommerceCategory.butcher:       return Icons.kebab_dining;
+      case CommerceCategory.greengrocer:   return Icons.eco;
+      case CommerceCategory.kiosk:         return Icons.store;
       case CommerceCategory.pharmacies:    return Icons.local_pharmacy;
       case CommerceCategory.health:        return Icons.health_and_safety;
       case CommerceCategory.beauty:        return Icons.face_retouching_natural;
+      case CommerceCategory.veterinary:    return Icons.medical_services;
+      case CommerceCategory.opticians:     return Icons.visibility;
+      case CommerceCategory.gym:           return Icons.fitness_center;
       case CommerceCategory.clothing:      return Icons.checkroom;
       case CommerceCategory.supermarket:   return Icons.shopping_cart;
       case CommerceCategory.hardware:      return Icons.construction;
       case CommerceCategory.jewelry:       return Icons.diamond;
       case CommerceCategory.market:        return Icons.storefront;
+      case CommerceCategory.furniture:     return Icons.chair;
+      case CommerceCategory.electronics:   return Icons.kitchen;
+      case CommerceCategory.bookstore:     return Icons.menu_book;
+      case CommerceCategory.toyStore:      return Icons.toys;
+      case CommerceCategory.babyStore:     return Icons.child_friendly;
+      case CommerceCategory.florist:       return Icons.local_florist;
+      case CommerceCategory.constructionMaterials: return Icons.foundation;
+      case CommerceCategory.automotive:    return Icons.directions_car;
+      case CommerceCategory.autoPartsRepair: return Icons.car_repair;
+      case CommerceCategory.tireShop:      return Icons.album;
+      case CommerceCategory.carWash:       return Icons.local_car_wash;
+      case CommerceCategory.bikeShop:      return Icons.pedal_bike;
       case CommerceCategory.streetVendor:  return Icons.shopping_bag;
       case CommerceCategory.entrepreneur:  return Icons.rocket_launch;
       case CommerceCategory.artisans:      return Icons.palette;
       case CommerceCategory.services:      return Icons.build;
-      case CommerceCategory.automotive:    return Icons.directions_car;
+      case CommerceCategory.laundry:       return Icons.local_laundry_service;
+      case CommerceCategory.realEstate:    return Icons.home_work;
       case CommerceCategory.education:     return Icons.school;
       case CommerceCategory.technology:    return Icons.devices;
       case CommerceCategory.entertainment: return Icons.theater_comedy;
@@ -612,19 +699,39 @@ class _FiltersSheetState extends State<_FiltersSheet> {
     CommerceCategory.fastFood: 'Comida Rapida',
     CommerceCategory.bar: 'Bar / Pub',
     CommerceCategory.bakery: 'Panaderia',
+    CommerceCategory.iceCream: 'Heladeria',
+    CommerceCategory.butcher: 'Carniceria',
+    CommerceCategory.greengrocer: 'Verduleria',
+    CommerceCategory.kiosk: 'Kiosco',
     CommerceCategory.pharmacies: 'Farmacias',
     CommerceCategory.health: 'Salud',
     CommerceCategory.beauty: 'Belleza',
+    CommerceCategory.veterinary: 'Veterinaria',
+    CommerceCategory.opticians: 'Optica',
+    CommerceCategory.gym: 'Gimnasio',
     CommerceCategory.clothing: 'Indumentaria',
     CommerceCategory.supermarket: 'Supermercados',
     CommerceCategory.hardware: 'Ferreteria',
     CommerceCategory.jewelry: 'Joyeria',
     CommerceCategory.market: 'Feria / Mercado',
+    CommerceCategory.furniture: 'Muebleria / Hogar',
+    CommerceCategory.electronics: 'Electrodomesticos',
+    CommerceCategory.bookstore: 'Libreria',
+    CommerceCategory.toyStore: 'Jugueteria',
+    CommerceCategory.babyStore: 'Bebes y Maternidad',
+    CommerceCategory.florist: 'Floreria',
+    CommerceCategory.constructionMaterials: 'Materiales de Construccion',
+    CommerceCategory.automotive: 'Automotriz',
+    CommerceCategory.autoPartsRepair: 'Repuestos Auto/Moto',
+    CommerceCategory.tireShop: 'Gomeria',
+    CommerceCategory.carWash: 'Lavadero',
+    CommerceCategory.bikeShop: 'Bicicleteria',
     CommerceCategory.streetVendor: 'Vendedores Ambulantes',
     CommerceCategory.entrepreneur: 'Emprendimientos',
     CommerceCategory.artisans: 'Artesanos',
     CommerceCategory.services: 'Servicios',
-    CommerceCategory.automotive: 'Automotriz',
+    CommerceCategory.laundry: 'Lavanderia / Tintoreria',
+    CommerceCategory.realEstate: 'Inmobiliaria',
     CommerceCategory.education: 'Educacion',
     CommerceCategory.technology: 'Tecnologia',
     CommerceCategory.entertainment: 'Entretenimiento',

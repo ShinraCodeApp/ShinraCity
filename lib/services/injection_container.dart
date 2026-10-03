@@ -27,6 +27,7 @@ import '../presentation/blocs/map/map_bloc.dart';
 import '../presentation/blocs/points/points_bloc.dart';
 import '../presentation/blocs/promotions/promotions_bloc.dart';
 import 'analytics_service.dart';
+import 'biometric_service.dart';
 import 'image_upload_service.dart';
 
 final GetIt sl = GetIt.instance;
@@ -49,6 +50,10 @@ Future<void> configureDependencies() async {
 
   sl.registerLazySingleton<ImageUploadService>(
     () => ImageUploadService(),
+  );
+
+  sl.registerLazySingleton<BiometricService>(
+    () => BiometricService(),
   );
 
   // Datasources

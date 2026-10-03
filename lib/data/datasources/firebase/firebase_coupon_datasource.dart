@@ -47,21 +47,24 @@ class FirebaseCouponDatasource {
         throw const CouponFailure(message: 'No hay cupos disponibles');
       }
 
-      // Check per-user limit
+      // Check per-user limit — fetch by userId+promotionId, filter status in Dart
       final perUserLimit = promotionData['perUserLimit'] as int? ?? 1;
-      final existingCoupons = await _firestore
+      final existingSnap = await _firestore
           .collection(AppConstants.couponsCollection)
           .where('userId', isEqualTo: userId)
           .where('promotionId', isEqualTo: promotionId)
-          .where('status', whereNotIn: ['cancelled', 'expired'])
-          .count()
           .get();
 
-      if (existingCoupons.count! >= perUserLimit) {
+      final activeCount = existingSnap.docs.where((d) {
+        final s = (d.data())['status'] as String?;
+        return s != 'cancelled' && s != 'expired';
+      }).length;
+
+      if (activeCount >= perUserLimit) {
         throw const CouponFailure(message: 'Ya reclamaste el máximo de cupones para esta promoción');
       }
 
-      // Antifraud: check device fingerprint
+      // Antifraud: fingerprint already encodes userId+deviceId+promotionId — single field query
       final fingerprint = CouponGenerator.generateAntifraudFingerprint(
         userId: userId,
         deviceId: deviceId,
@@ -70,8 +73,8 @@ class FirebaseCouponDatasource {
 
       final fraudCheck = await _firestore
           .collection(AppConstants.couponsCollection)
+          .where('userId', isEqualTo: userId)
           .where('deviceFingerprint', isEqualTo: fingerprint)
-          .where('promotionId', isEqualTo: promotionId)
           .count()
           .get();
 
@@ -99,7 +102,8 @@ class FirebaseCouponDatasource {
 
       final checksum = CouponGenerator.generateChecksum('$couponId:$userId:$promotionId');
 
-      final couponData = {
+      final now = Timestamp.now();
+      final firestoreData = {
         'id': couponId,
         'userId': userId,
         'commerceId': promotionData['commerceId'],
@@ -124,12 +128,13 @@ class FirebaseCouponDatasource {
           .collection(AppConstants.couponsCollection)
           .doc(couponId);
 
-      transaction.set(couponRef, couponData);
+      transaction.set(couponRef, firestoreData);
       transaction.update(promotionRef, {
         'usedSlots': FieldValue.increment(1),
       });
 
-      return couponData;
+      // Retornar con Timestamp real para evitar FieldValue cast al parsear localmente
+      return {...firestoreData, 'issuedAt': now};
     });
   }
 
@@ -229,8 +234,7 @@ class FirebaseCouponDatasource {
     Query query = _firestore
         .collection(AppConstants.couponsCollection)
         .where('userId', isEqualTo: userId)
-        .orderBy('issuedAt', descending: true)
-        .limit(limit);
+        .limit(limit * 3);
 
     if (status != null) {
       query = query.where('status', isEqualTo: status.name);
@@ -241,32 +245,50 @@ class FirebaseCouponDatasource {
     }
 
     final snapshot = await query.get();
-    return snapshot.docs.map((d) => {...d.data() as Map<String, dynamic>, 'id': d.id}).toList();
+    final docs = snapshot.docs
+        .map((d) => {...d.data() as Map<String, dynamic>, 'id': d.id})
+        .toList()
+      ..sort((a, b) {
+        final aDate = (a['issuedAt'] as Timestamp?)?.toDate() ?? DateTime(0);
+        final bDate = (b['issuedAt'] as Timestamp?)?.toDate() ?? DateTime(0);
+        return bDate.compareTo(aDate);
+      });
+    return docs.take(limit).toList();
   }
 
   Stream<List<Map<String, dynamic>>> watchUserCoupons(String userId) {
     return _firestore
         .collection(AppConstants.couponsCollection)
         .where('userId', isEqualTo: userId)
-        .where('status', whereIn: [CouponStatus.available.name, CouponStatus.reserved.name])
-        .orderBy('expiresAt')
         .snapshots()
-        .map((s) => s.docs
-            .map((d) => {...d.data(), 'id': d.id})
-            .toList());
+        .map((s) {
+          final docs = s.docs
+              .map((d) => {...d.data(), 'id': d.id})
+              .toList()
+            ..sort((a, b) {
+              final aDate = (a['issuedAt'] as Timestamp?)?.toDate() ?? DateTime(0);
+              final bDate = (b['issuedAt'] as Timestamp?)?.toDate() ?? DateTime(0);
+              return bDate.compareTo(aDate);
+            });
+          return docs;
+        });
   }
 
   Future<void> checkAndExpireCoupons(String userId) async {
     final now = Timestamp.now();
-    final expiredCoupons = await _firestore
+    final snap = await _firestore
         .collection(AppConstants.couponsCollection)
         .where('userId', isEqualTo: userId)
         .where('status', isEqualTo: CouponStatus.available.name)
-        .where('expiresAt', isLessThan: now)
         .get();
 
+    final expiredDocs = snap.docs.where((doc) {
+      final expiresAt = (doc.data())['expiresAt'] as Timestamp?;
+      return expiresAt != null && expiresAt.compareTo(now) < 0;
+    });
+
     final batch = _firestore.batch();
-    for (final doc in expiredCoupons.docs) {
+    for (final doc in expiredDocs) {
       batch.update(doc.reference, {'status': CouponStatus.expired.name});
     }
     await batch.commit();

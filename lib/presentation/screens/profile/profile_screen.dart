@@ -372,7 +372,11 @@ class ProfileScreen extends StatelessWidget {
         return {'id': id, ...?doc.data()};
       })),
       builder: (context, snap) {
-        final achievements = snap.data ?? ids.map((id) => {'id': id}).toList();
+        if (snap.hasError || snap.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+        final achievements = snap.data ?? [];
+        if (achievements.isEmpty) return const SizedBox.shrink();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

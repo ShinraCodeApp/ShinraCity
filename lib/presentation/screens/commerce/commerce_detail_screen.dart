@@ -35,6 +35,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
   late TabController _tabController;
   bool _isFavorite = false;
   bool _isFollowing = false;
+  bool _isClaiming = false;
   CommerceEntity? _currentCommerce;
   String _deviceId = '';
   List<ReviewEntity> _reviews = [];
@@ -79,8 +80,10 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
       body: BlocListener<CouponsBloc, CouponsState>(
         listener: (context, state) {
           if (state is CouponClaimed) {
+            setState(() => _isClaiming = false);
             _showCouponClaimedDialog(state.coupon.promotionTitle);
           } else if (state is CouponsError) {
+            setState(() => _isClaiming = false);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -310,7 +313,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      commerce.category.name,
+                      commerce.categoryDisplayName,
                       style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.primary,
                       ),
@@ -575,20 +578,59 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
   }
 
   Widget _buildAboutTab(CommerceEntity commerce) {
+    final user = FirebaseAuth.instance.currentUser;
+    final isOwner = user != null && user.uid == commerce.ownerId;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (commerce.description.isNotEmpty) ...[
-            _buildSection('Descripción', commerce.description),
-            const SizedBox(height: 20),
-          ],
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildSectionTitle('Descripción'),
+              if (isOwner)
+                OutlinedButton.icon(
+                  onPressed: () => _showEditInfoSheet(commerce),
+                  icon: const Icon(Icons.edit_outlined, size: 15),
+                  label: const Text('Editar'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    textStyle: AppTextStyles.labelSmall,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (commerce.description.isNotEmpty)
+            Text(
+              commerce.description,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondaryDark,
+                height: 1.6,
+              ),
+            )
+          else
+            Text(
+              isOwner
+                  ? 'Tocá "Editar" para agregar una descripción.'
+                  : 'Sin descripción.',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondaryDark.withValues(alpha: 0.6),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          const SizedBox(height: 20),
           _buildSectionTitle('Horarios'),
           const SizedBox(height: 8),
           _buildHours(commerce),
-          const SizedBox(height: 20),
           if (commerce.website != null) ...[
+            const SizedBox(height: 20),
             _buildSectionTitle('Sitio web'),
             const SizedBox(height: 8),
             _buildWebsite(commerce.website!),
@@ -611,7 +653,248 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
                   .toList(),
             ),
           ],
+          const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+
+  void _showEditInfoSheet(CommerceEntity commerce) {
+    const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+    final descController = TextEditingController(text: commerce.description);
+
+    final isOpen = <String, bool>{
+      for (final k in dayKeys) k: commerce.businessHours[k]?.isOpen ?? false,
+    };
+    final openTime = <String, String>{
+      for (final k in dayKeys) k: commerce.businessHours[k]?.openTime ?? '09:00',
+    };
+    final closeTime = <String, String>{
+      for (final k in dayKeys) k: commerce.businessHours[k]?.closeTime ?? '18:00',
+    };
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          Future<void> pickTime(String key, bool isOpenTime) async {
+            final src = isOpenTime ? openTime[key]! : closeTime[key]!;
+            final parts = src.split(':');
+            final initial = TimeOfDay(
+              hour: int.tryParse(parts.first) ?? 9,
+              minute: int.tryParse(parts.last) ?? 0,
+            );
+            final picked = await showTimePicker(
+              context: ctx,
+              initialTime: initial,
+              builder: (c, child) => MediaQuery(
+                data: MediaQuery.of(c).copyWith(alwaysUse24HourFormat: true),
+                child: child!,
+              ),
+            );
+            if (picked != null) {
+              final str =
+                  '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+              setSheet(() {
+                if (isOpenTime) openTime[key] = str;
+                else closeTime[key] = str;
+              });
+            }
+          }
+
+          return DraggableScrollableSheet(
+            initialChildSize: 0.92,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder: (_, scrollCtrl) => Container(
+              decoration: const BoxDecoration(
+                color: AppColors.backgroundCard,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Editar información',
+                        style: AppTextStyles.titleMedium.copyWith(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const Divider(color: Color(0xFF1E293B), height: 24),
+                  Expanded(
+                    child: ListView(
+                      controller: scrollCtrl,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      children: [
+                        Text(
+                          'Descripción',
+                          style: AppTextStyles.titleSmall.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: descController,
+                          maxLines: 4,
+                          maxLength: 500,
+                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Contá de qué trata tu negocio...',
+                            hintStyle: AppTextStyles.bodyMedium
+                                .copyWith(color: AppColors.textSecondaryDark),
+                            filled: true,
+                            fillColor: AppColors.backgroundSurface,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            counterStyle: AppTextStyles.labelSmall
+                                .copyWith(color: AppColors.textSecondaryDark),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Horarios',
+                          style: AppTextStyles.titleSmall.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        ...List.generate(7, (i) {
+                          final key = dayKeys[i];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 90,
+                                  child: Text(
+                                    dayNames[i],
+                                    style: AppTextStyles.bodySmall
+                                        .copyWith(color: Colors.white),
+                                  ),
+                                ),
+                                Switch(
+                                  value: isOpen[key]!,
+                                  onChanged: (v) => setSheet(() => isOpen[key] = v),
+                                  activeThumbColor: AppColors.primary,
+                                  activeTrackColor:
+                                      AppColors.primary.withValues(alpha: 0.4),
+                                ),
+                                if (isOpen[key]!) ...[
+                                  const SizedBox(width: 6),
+                                  _DetailTimeChip(
+                                    time: openTime[key]!,
+                                    onTap: () => pickTime(key, true),
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 6),
+                                    child: Text('–',
+                                        style: TextStyle(color: Colors.white54)),
+                                  ),
+                                  _DetailTimeChip(
+                                    time: closeTime[key]!,
+                                    onTap: () => pickTime(key, false),
+                                  ),
+                                ] else
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Text(
+                                      'Cerrado',
+                                      style: AppTextStyles.bodySmall
+                                          .copyWith(color: AppColors.textSecondaryDark),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                        20, 8, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(sheetCtx),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white54,
+                              side: const BorderSide(color: Colors.white24),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('Cancelar'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              final newHours = <String, BusinessHours>{};
+                              for (final key in dayKeys) {
+                                newHours[key] = BusinessHours(
+                                  isOpen: isOpen[key]!,
+                                  openTime: isOpen[key]! ? openTime[key] : null,
+                                  closeTime: isOpen[key]! ? closeTime[key] : null,
+                                );
+                              }
+                              context.read<CommerceBloc>().add(
+                                    UpdateCommerceEvent(
+                                      commerce.copyWith(
+                                        businessHours: newHours,
+                                        description: descController.text.trim(),
+                                      ),
+                                    ),
+                                  );
+                              Navigator.pop(sheetCtx);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: AppColors.backgroundDark,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text(
+                              'Guardar cambios',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -649,23 +932,6 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
           ),
         );
       }),
-    );
-  }
-
-  Widget _buildSection(String title, String content) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle(title),
-        const SizedBox(height: 8),
-        Text(
-          content,
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondaryDark,
-            height: 1.6,
-          ),
-        ),
-      ],
     );
   }
 
@@ -890,7 +1156,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
     await Share.share(
       '¡Mirá ${commerce.name} en ShinraCity! '
       'Tienen promociones exclusivas cerca de vos. '
-      'https://shinracity.app/commerce/${commerce.id}',
+      'https://shinra-city.web.app/commerce/${commerce.id}',
       subject: commerce.name,
     );
   }
@@ -924,6 +1190,8 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
   }
 
   void _claimPromotion(PromotionEntity promotion) {
+    if (_isClaiming) return;
+    setState(() => _isClaiming = true);
     context.read<CouponsBloc>().add(
       ClaimCouponEvent(promotionId: promotion.id, deviceId: _deviceId),
     );
@@ -1155,5 +1423,34 @@ class _PromotionDetailSheet extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+}
+
+class _DetailTimeChip extends StatelessWidget {
+  final String time;
+  final VoidCallback onTap;
+
+  const _DetailTimeChip({required this.time, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.backgroundSurface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+        ),
+        child: Text(
+          time,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
   }
 }

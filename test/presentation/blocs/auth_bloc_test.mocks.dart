@@ -140,12 +140,14 @@ class MockAuthRepository extends Mock implements AuthRepository {
     String? displayName,
     String? photoUrl,
     String? phoneNumber,
+    String? bio,
   }) =>
       super.noSuchMethod(
         Invocation.method(#updateProfile, [], {
           #displayName: displayName,
           #photoUrl: photoUrl,
           #phoneNumber: phoneNumber,
+          #bio: bio,
         }),
         returnValue: Future.value(
           const Left<Failure, UserEntity>(ServerFailure(message: 'mock')),

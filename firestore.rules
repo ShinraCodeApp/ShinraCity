@@ -30,7 +30,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isCurrentUser(userId) || isAdmin();
       allow create: if isCurrentUser(userId);
-      allow update: if isCurrentUser(userId) || isAdmin();
+      // Users can update their own profile but cannot change role/suspension/verification fields
+      allow update: if (isCurrentUser(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isActive', 'isSuspended', 'isVerified'])) || isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -46,15 +47,23 @@ service cloud.firestore {
     match /promotions/{promotionId} {
       allow read: if true;
       allow create: if isBusinessOwner() || ownsCommerce(request.resource.data.commerceId);
-      allow update: if ownsCommerce(resource.data.commerceId) || isAdmin();
+      allow update: if ownsCommerce(resource.data.commerceId) || isAdmin()
+                    || (isAuthenticated()
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedSlots'])
+                        && request.resource.data.usedSlots is int
+                        && resource.data.usedSlots is int
+                        && request.resource.data.usedSlots > resource.data.usedSlots);
       allow delete: if isAdmin();
     }
 
-    // Coupons
+    // Coupons — create only via Cloud Functions (callable), direct client writes rejected
+    // except the user's own coupon documents with matching userId
     match /coupons/{couponId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['userId', 'promotionId', 'commerceId', 'status']);
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin())
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId', 'promotionId', 'commerceId']);
       allow delete: if isAdmin();
     }
 
@@ -96,14 +105,20 @@ service cloud.firestore {
     // Points transactions
     match /points_transactions/{txId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['userId', 'points', 'type', 'createdAt'])
+                    && request.resource.data.points is int
+                    && request.resource.data.points > 0;
       allow update, delete: if isAdmin();
     }
 
     // Reward redemptions
     match /reward_redemptions/{redemptionId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['userId', 'rewardId', 'pointsCost', 'createdAt']);
       allow update, delete: if isAdmin();
     }
 

@@ -19,6 +19,7 @@ class FirebasePromotionDatasource {
 
   Future<PromotionModel> createPromotion(PromotionModel promotion) async {
     final ref = _firestore.collection(AppConstants.promotionsCollection).doc();
+    final now = Timestamp.now();
     final data = {
       ...promotion.toFirestore(),
       'createdAt': FieldValue.serverTimestamp(),
@@ -36,7 +37,9 @@ class FirebasePromotionDatasource {
       });
     }
 
-    return PromotionModel.fromMap({...data, 'id': ref.id}, ref.id);
+    // Replace FieldValue entries with concrete Timestamp for local model construction
+    final localData = {...data, 'createdAt': now, 'updatedAt': now, 'id': ref.id};
+    return PromotionModel.fromMap(localData, ref.id);
   }
 
   Future<PromotionModel> getPromotion(String id) async {
@@ -174,12 +177,12 @@ class FirebasePromotionDatasource {
         .collection(AppConstants.promotionsCollection)
         .where('status', isEqualTo: PromotionStatus.active.name)
         .where('endDate', isGreaterThan: Timestamp.now())
-        .orderBy('endDate')
-        .orderBy('claimCount', descending: true)
-        .limit(limit)
+        .limit(limit * 3)
         .get();
 
-    return snapshot.docs.map((d) => PromotionModel.fromFirestore(d)).toList();
+    final list = snapshot.docs.map((d) => PromotionModel.fromFirestore(d)).toList()
+      ..sort((a, b) => b.claimCount.compareTo(a.claimCount));
+    return list.take(limit).toList();
   }
 
   Future<String> uploadPromotionImage({

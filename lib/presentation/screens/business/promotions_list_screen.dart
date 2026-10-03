@@ -7,8 +7,9 @@ import '../../blocs/promotions/promotions_bloc.dart';
 
 class PromotionsListScreen extends StatefulWidget {
   final String commerceId;
+  final String? commerceName;
 
-  const PromotionsListScreen({super.key, required this.commerceId});
+  const PromotionsListScreen({super.key, required this.commerceId, this.commerceName});
 
   @override
   State<PromotionsListScreen> createState() => _PromotionsListScreenState();
@@ -37,8 +38,9 @@ class _PromotionsListScreenState extends State<PromotionsListScreen> {
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Nueva promoción',
-            onPressed: () => context
-                .push('/commerce/${widget.commerceId}/create-promotion'),
+            onPressed: () => context.push(
+                    '/commerce/${widget.commerceId}/create-promotion',
+                    extra: {'commerceName': widget.commerceName}),
           ),
         ],
       ),

@@ -23,7 +23,7 @@ class _CouponsScreenState extends State<CouponsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    context.read<CouponsBloc>().add(LoadUserCouponsEvent());
+    context.read<CouponsBloc>().add(WatchUserCouponsEvent());
   }
 
   @override
@@ -51,9 +51,34 @@ class _CouponsScreenState extends State<CouponsScreen>
           ],
         ),
       ),
-      body: BlocBuilder<CouponsBloc, CouponsState>(
-        builder: (context, state) {
-          if (state is CouponsLoading) {
+      body: BlocListener<CouponsBloc, CouponsState>(
+        listener: (context, state) {
+          if (state is CouponRedeemedExternally) {
+            _tabController.animateTo(1);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.white),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '¡Cupón "${state.coupon.promotionTitle}" canjeado!',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: AppColors.success,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        },
+        child: BlocBuilder<CouponsBloc, CouponsState>(
+          builder: (context, state) {
+            if (state is CouponsLoading) {
             return const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             );
@@ -79,8 +104,34 @@ class _CouponsScreenState extends State<CouponsScreen>
             );
           }
 
+          if (state is CouponsError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline_rounded,
+                      size: 56, color: AppColors.error),
+                  const SizedBox(height: 16),
+                  Text(state.message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () =>
+                        context.read<CouponsBloc>().add(WatchUserCouponsEvent()),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Reintentar'),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary),
+                  ),
+                ],
+              ),
+            );
+          }
+
           return const SizedBox.shrink();
         },
+      ),
       ),
     );
   }

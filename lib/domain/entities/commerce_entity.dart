@@ -12,23 +12,44 @@ enum CommerceCategory {
   fastFood,
   bar,
   bakery,
+  iceCream,
+  butcher,
+  greengrocer,
+  kiosk,
   // Salud y bienestar
   pharmacies,
   health,
   beauty,
+  veterinary,
+  opticians,
+  gym,
   // Comercio general
   clothing,
   supermarket,
   hardware,
   jewelry,
   market,
+  furniture,
+  electronics,
+  bookstore,
+  toyStore,
+  babyStore,
+  florist,
+  constructionMaterials,
+  // Automotor
+  automotive,
+  autoPartsRepair,
+  tireShop,
+  carWash,
+  bikeShop,
   // Emprendedores
   streetVendor,
   entrepreneur,
   artisans,
   // Servicios
   services,
-  automotive,
+  laundry,
+  realEstate,
   education,
   // Ocio y tecnología
   technology,
@@ -143,19 +164,39 @@ class CommerceEntity extends Equatable {
       case CommerceCategory.fastFood: return 'Comida Rápida';
       case CommerceCategory.bar: return 'Bar / Pub';
       case CommerceCategory.bakery: return 'Panadería';
+      case CommerceCategory.iceCream: return 'Heladería';
+      case CommerceCategory.butcher: return 'Carnicería';
+      case CommerceCategory.greengrocer: return 'Verdulería';
+      case CommerceCategory.kiosk: return 'Kiosco';
       case CommerceCategory.pharmacies: return 'Farmacia';
       case CommerceCategory.health: return 'Salud';
       case CommerceCategory.beauty: return 'Belleza';
+      case CommerceCategory.veterinary: return 'Veterinaria';
+      case CommerceCategory.opticians: return 'Óptica';
+      case CommerceCategory.gym: return 'Gimnasio';
       case CommerceCategory.clothing: return 'Indumentaria';
       case CommerceCategory.supermarket: return 'Supermercado';
       case CommerceCategory.hardware: return 'Ferretería';
       case CommerceCategory.jewelry: return 'Joyería';
       case CommerceCategory.market: return 'Feria / Mercado';
+      case CommerceCategory.furniture: return 'Mueblería / Hogar';
+      case CommerceCategory.electronics: return 'Electrodomésticos';
+      case CommerceCategory.bookstore: return 'Librería';
+      case CommerceCategory.toyStore: return 'Juguetería';
+      case CommerceCategory.babyStore: return 'Bebés y Maternidad';
+      case CommerceCategory.florist: return 'Florería';
+      case CommerceCategory.constructionMaterials: return 'Materiales de Construcción';
+      case CommerceCategory.automotive: return 'Automotriz';
+      case CommerceCategory.autoPartsRepair: return 'Repuestos Auto/Moto';
+      case CommerceCategory.tireShop: return 'Gomería';
+      case CommerceCategory.carWash: return 'Lavadero';
+      case CommerceCategory.bikeShop: return 'Bicicletería';
       case CommerceCategory.streetVendor: return 'Vendedor Ambulante';
       case CommerceCategory.entrepreneur: return 'Emprendimiento';
       case CommerceCategory.artisans: return 'Artesanos';
       case CommerceCategory.services: return 'Servicios';
-      case CommerceCategory.automotive: return 'Automotriz';
+      case CommerceCategory.laundry: return 'Lavandería / Tintorería';
+      case CommerceCategory.realEstate: return 'Inmobiliaria';
       case CommerceCategory.education: return 'Educación';
       case CommerceCategory.technology: return 'Tecnología';
       case CommerceCategory.entertainment: return 'Entretenimiento';

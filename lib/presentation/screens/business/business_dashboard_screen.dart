@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
@@ -111,6 +112,42 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
             if (state is CommerceDashboardLoaded) {
               return _buildDashboard(context, state);
             }
+            if (state is CommerceError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No se pudo cargar el negocio',
+                        style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        state.message,
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondaryDark),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      OutlinedButton.icon(
+                        onPressed: () => context.read<CommerceBloc>().add(LoadBusinessDashboard()),
+                        icon: const Icon(Icons.refresh, color: AppColors.primary),
+                        label: const Text('Reintentar', style: TextStyle(color: AppColors.primary)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.primary),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
             return const SizedBox.shrink();
           },
         ),
@@ -180,6 +217,10 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
             _buildCommerceHeader(commerce),
             const SizedBox(height: 20),
             _buildPlanBanner(commerce),
+            if (commerce.isAmbulant) ...[
+              const SizedBox(height: 20),
+              _buildAmbulantLocationCard(),
+            ],
             const SizedBox(height: 20),
             _buildStatsOverview(state),
             const SizedBox(height: 20),
@@ -189,11 +230,13 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
             const SizedBox(height: 20),
             _buildQuickActions(context, commerce),
             const SizedBox(height: 20),
+            _buildBusinessInfoSection(context, commerce),
+            const SizedBox(height: 20),
             _buildRecentActivity(state),
             const SizedBox(height: 20),
             _buildAISuggestions(state),
             const SizedBox(height: 20),
-            _buildPromotionsSection(context, state.commerce.id),
+            _buildPromotionsSection(context, state.commerce.id, state.commerce.name),
             const SizedBox(height: 32),
           ],
         ),
@@ -360,6 +403,92 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
         ],
       ),
     ).animate().fadeIn(delay: 100.ms);
+  }
+
+  Widget _buildAmbulantLocationCard() {
+    return ValueListenableBuilder<AmbulantLocationStatus>(
+      valueListenable: AmbulantLocationService.instance.status,
+      builder: (context, status, _) {
+        late Color color;
+        late IconData icon;
+        late String title;
+        late String subtitle;
+        VoidCallback? action;
+        String? actionLabel;
+
+        switch (status) {
+          case AmbulantLocationStatus.active:
+            color = AppColors.success;
+            icon = Icons.location_on;
+            title = 'Compartiendo tu ubicación en vivo';
+            subtitle = 'Los clientes te ven moverse en el mapa en tiempo real';
+            break;
+          case AmbulantLocationStatus.denied:
+            color = AppColors.warning;
+            icon = Icons.location_off;
+            title = 'Necesitamos tu ubicación';
+            subtitle = 'Activá el GPS para que los clientes te encuentren en el mapa';
+            action = () => AmbulantLocationService.instance.retry();
+            actionLabel = 'Activar';
+            break;
+          case AmbulantLocationStatus.deniedForever:
+            color = AppColors.error;
+            icon = Icons.location_disabled;
+            title = 'Ubicación bloqueada';
+            subtitle = 'Habilitá el permiso de ubicación desde Ajustes del teléfono';
+            action = () => Geolocator.openAppSettings();
+            actionLabel = 'Ajustes';
+            break;
+          case AmbulantLocationStatus.stopped:
+            color = AppColors.textSecondaryDark;
+            icon = Icons.location_searching;
+            title = 'Iniciando ubicación...';
+            subtitle = 'Vas a aparecer en el mapa apenas se active el GPS';
+            break;
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.backgroundCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withValues(alpha: 0.4)),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 26),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
+                    ),
+                  ],
+                ),
+              ),
+              if (action != null) ...[
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: action,
+                  style: TextButton.styleFrom(foregroundColor: color),
+                  child: Text(actionLabel!, style: const TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ],
+          ),
+        ).animate().fadeIn(delay: 100.ms);
+      },
+    );
   }
 
   Widget _buildStatsOverview(CommerceDashboardLoaded state) {
@@ -616,7 +745,8 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
   Widget _buildQuickActions(BuildContext context, CommerceEntity commerce) {
     final actions = [
       (Icons.add_circle_outline, 'Nueva\npromoción', AppColors.primary,
-          () => context.push('/commerce/${commerce.id}/create-promotion')),
+          () => context.push('/commerce/${commerce.id}/create-promotion',
+              extra: {'commerceName': commerce.name})),
       (Icons.qr_code_scanner, 'Escanear\ncupón', AppColors.secondary,
           () => context.push('/scan/${commerce.id}')),
       (Icons.bar_chart, 'Estadísticas\ncompletas', AppColors.accentGreen,
@@ -672,6 +802,317 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
         ),
       ],
     ).animate().fadeIn(delay: 400.ms);
+  }
+
+  Widget _buildBusinessInfoSection(BuildContext context, CommerceEntity commerce) {
+    const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const dayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Información del negocio',
+              style: AppTextStyles.titleLarge.copyWith(color: Colors.white),
+            ),
+            TextButton.icon(
+              onPressed: () => _showEditHoursSheet(context, commerce),
+              icon: const Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
+              label: Text('Editar', style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.backgroundCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF1E293B)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.schedule_outlined, color: AppColors.primary, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Horarios de atención',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (commerce.businessHours.isEmpty)
+                Text(
+                  'Sin horarios configurados — tocá Editar para agregarlos.',
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
+                )
+              else
+                ...List.generate(7, (i) {
+                  final h = commerce.businessHours[dayKeys[i]];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 36,
+                          child: Text(
+                            dayLabels[i],
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textSecondaryDark,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          h == null || !h.isOpen
+                              ? 'Cerrado'
+                              : '${h.openTime} – ${h.closeTime}',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: h?.isOpen == true ? Colors.white : AppColors.textSecondaryDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+            ],
+          ),
+        ),
+      ],
+    ).animate().fadeIn(delay: 350.ms);
+  }
+
+  Future<void> _showEditHoursSheet(BuildContext context, CommerceEntity commerce) async {
+    const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const dayLabels = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+    final isOpen = <String, bool>{};
+    final openTime = <String, String>{};
+    final closeTime = <String, String>{};
+    for (final key in dayKeys) {
+      final h = commerce.businessHours[key];
+      isOpen[key] = h?.isOpen ?? false;
+      openTime[key] = h?.openTime ?? '09:00';
+      closeTime[key] = h?.closeTime ?? '18:00';
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.backgroundCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (sheetCtx, setModalState) {
+            Future<void> pickTime(String key, bool isOpenPick) async {
+              final parts = (isOpenPick ? openTime[key]! : closeTime[key]!).split(':');
+              final initial = TimeOfDay(
+                hour: int.parse(parts[0]),
+                minute: int.parse(parts[1]),
+              );
+              final picked = await showTimePicker(
+                context: sheetCtx,
+                initialTime: initial,
+                builder: (_, child) => MediaQuery(
+                  data: MediaQuery.of(sheetCtx).copyWith(alwaysUse24HourFormat: true),
+                  child: child!,
+                ),
+              );
+              if (picked != null) {
+                final formatted =
+                    '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                setModalState(() {
+                  if (isOpenPick) {
+                    openTime[key] = formatted;
+                  } else {
+                    closeTime[key] = formatted;
+                  }
+                });
+              }
+            }
+
+            return DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.85,
+              maxChildSize: 0.95,
+              builder: (_, scrollController) => Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF475569),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.schedule, color: AppColors.primary),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Horarios de atención',
+                          style: AppTextStyles.titleLarge.copyWith(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'Activá los días y configurá los horarios de apertura y cierre.',
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1, color: Color(0xFF1E293B)),
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      itemCount: 7,
+                      itemBuilder: (_, i) {
+                        final key = dayKeys[i];
+                        final open = isOpen[key]!;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  SizedBox(
+                                    width: 100,
+                                    child: Text(
+                                      dayLabels[i],
+                                      style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+                                    ),
+                                  ),
+                                  Switch(
+                                    value: open,
+                                    activeThumbColor: AppColors.primary,
+                                    activeTrackColor: AppColors.primary.withValues(alpha: 0.4),
+                                    onChanged: (v) => setModalState(() => isOpen[key] = v),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    open ? 'Abierto' : 'Cerrado',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: open ? AppColors.primary : AppColors.textSecondaryDark,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (open) ...[
+                                const SizedBox(height: 8),
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 4),
+                                  child: Row(
+                                    children: [
+                                      _TimeChip(
+                                        label: 'Apertura',
+                                        time: openTime[key]!,
+                                        onTap: () => pickTime(key, true),
+                                      ),
+                                      const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 12),
+                                        child: Text('–', style: TextStyle(color: Colors.white54, fontSize: 18)),
+                                      ),
+                                      _TimeChip(
+                                        label: 'Cierre',
+                                        time: closeTime[key]!,
+                                        onTap: () => pickTime(key, false),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                              ],
+                              const Divider(height: 1, color: Color(0xFF1E293B)),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      20, 12, 20, MediaQuery.of(sheetCtx).viewInsets.bottom + 20,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(sheetCtx),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFF475569)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text(
+                              'Cancelar',
+                              style: AppTextStyles.bodyMedium.copyWith(color: Colors.white70),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              final newHours = <String, BusinessHours>{};
+                              for (final key in dayKeys) {
+                                newHours[key] = BusinessHours(
+                                  isOpen: isOpen[key]!,
+                                  openTime: isOpen[key]! ? openTime[key] : null,
+                                  closeTime: isOpen[key]! ? closeTime[key] : null,
+                                );
+                              }
+                              context.read<CommerceBloc>().add(
+                                UpdateCommerceEvent(commerce.copyWith(businessHours: newHours)),
+                              );
+                              Navigator.pop(sheetCtx);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text(
+                              'Guardar horarios',
+                              style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildRecentActivity(CommerceDashboardLoaded state) {
@@ -778,7 +1219,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
     ).animate().fadeIn(delay: 600.ms);
   }
 
-  Widget _buildPromotionsSection(BuildContext context, String commerceId) {
+  Widget _buildPromotionsSection(BuildContext context, String commerceId, String commerceName) {
     return BlocBuilder<PromotionsBloc, PromotionsState>(
       builder: (context, state) {
         final promotions = state is PromotionsLoaded ? state.promotions : <PromotionEntity>[];
@@ -795,7 +1236,8 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                   style: AppTextStyles.titleLarge.copyWith(color: Colors.white),
                 ),
                 TextButton.icon(
-                  onPressed: () => context.push('/commerce/$commerceId/create-promotion'),
+                  onPressed: () => context.push('/commerce/$commerceId/create-promotion',
+                      extra: {'commerceName': commerceName}),
                   icon: const Icon(Icons.add, size: 16, color: AppColors.primary),
                   label: Text(
                     'Nueva',
@@ -846,7 +1288,8 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
               ),
             if (promotions.length > 5)
               TextButton(
-                onPressed: () => context.push('/commerce/$commerceId/promotions'),
+                onPressed: () => context.push('/commerce/$commerceId/promotions',
+                    extra: {'commerceName': commerceName}),
                 child: Text(
                   'Ver todas (${promotions.length})',
                   style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary),
@@ -1135,7 +1578,8 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  context.push('/plan-upgrade');
+                  context.push('/business/upgrade',
+                      extra: {'commerceId': existing.docs.first.id});
                 },
                 child: Text('Ver planes',
                     style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
@@ -1175,6 +1619,47 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TimeChip extends StatelessWidget {
+  final String label;
+  final String time;
+  final VoidCallback onTap;
+
+  const _TimeChip({required this.label, required this.time, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              time,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

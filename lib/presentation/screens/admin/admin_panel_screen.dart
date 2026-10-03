@@ -21,6 +21,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _db = FirebaseFirestore.instance;
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -31,6 +33,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -409,11 +412,28 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return _buildLoader();
+                  final docs = _searchQuery.isEmpty
+                      ? snapshot.data!.docs
+                      : snapshot.data!.docs.where((d) {
+                          final data = d.data() as Map<String, dynamic>;
+                          final name = (data['name'] as String? ?? '').toLowerCase();
+                          final address = (data['address'] as String? ?? '').toLowerCase();
+                          final category = (data['category'] as String? ?? '').toLowerCase();
+                          return name.contains(_searchQuery) ||
+                              address.contains(_searchQuery) ||
+                              category.contains(_searchQuery);
+                        }).toList();
+                  if (docs.isEmpty) {
+                    return Center(
+                      child: Text('Sin resultados para "$_searchQuery"',
+                          style: AppTextStyles.bodySmall
+                              .copyWith(color: AppColors.textSecondaryDark)),
+                    );
+                  }
                   return ListView.builder(
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
-                    itemCount: snapshot.data!.docs.length,
-                    itemBuilder: (_, i) =>
-                        _buildCommerceAdminCard(snapshot.data!.docs[i]),
+                    itemCount: docs.length,
+                    itemBuilder: (_, i) => _buildCommerceAdminCard(docs[i]),
                   );
                 },
               ),
@@ -450,6 +470,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
       'rejected': AppColors.error,
     };
     final statusColor = statusColors[status] ?? AppColors.textSecondaryDark;
+    final isAmbulant = data['isAmbulant'] == true;
+    final liveLocation = data['liveLocation'] as GeoPoint?;
+    final liveLocationUpdatedAt = (data['liveLocationUpdatedAt'] as Timestamp?)?.toDate();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -458,54 +481,108 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
         color: AppColors.backgroundCard,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  data['name'] ?? 'Sin nombre',
-                  style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data['name'] ?? 'Sin nombre',
+                      style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+                    ),
+                    Text(
+                      data['plan'] ?? 'free',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.textSecondaryDark,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  data['plan'] ?? 'free',
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.textSecondaryDark,
-                  ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              status,
-              style: AppTextStyles.labelSmall.copyWith(color: statusColor),
-            ),
-          ),
-          const SizedBox(width: 8),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: AppColors.textSecondaryDark, size: 18),
-            color: AppColors.backgroundCard,
-            onSelected: (action) => _handleCommerceAction(doc.id, action),
-            itemBuilder: (_) => [
-              if (status == 'pending')
-                const PopupMenuItem(value: 'verify', child: Text('Verificar')),
-              if (status == 'active')
-                const PopupMenuItem(value: 'suspend', child: Text('Suspender')),
-              if (status == 'suspended')
-                const PopupMenuItem(value: 'reactivate', child: Text('Reactivar')),
-              const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                child: Text(
+                  status,
+                  style: AppTextStyles.labelSmall.copyWith(color: statusColor),
+                ),
+              ),
+              const SizedBox(width: 8),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: AppColors.textSecondaryDark, size: 18),
+                color: AppColors.backgroundCard,
+                onSelected: (action) => _handleCommerceAction(doc.id, action),
+                itemBuilder: (_) => [
+                  if (status == 'pending')
+                    const PopupMenuItem(value: 'verify', child: Text('Verificar')),
+                  if (status == 'active')
+                    const PopupMenuItem(value: 'suspend', child: Text('Suspender')),
+                  if (status == 'suspended')
+                    const PopupMenuItem(value: 'reactivate', child: Text('Reactivar')),
+                  const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                ],
+              ),
             ],
           ),
+          if (isAmbulant) ...[
+            const Divider(height: 20, color: Color(0xFF1E293B)),
+            _buildLiveLocationRow(liveLocation, liveLocationUpdatedAt),
+          ],
         ],
       ),
     );
+  }
+
+  Widget _buildLiveLocationRow(GeoPoint? location, DateTime? updatedAt) {
+    final isStale = updatedAt == null ||
+        DateTime.now().difference(updatedAt) > const Duration(minutes: 5);
+    final active = location != null && !isStale;
+    final color = active ? AppColors.success : AppColors.textSecondaryDark;
+
+    String subtitle;
+    if (location == null) {
+      subtitle = 'Vendedor ambulante · sin ubicación activa';
+    } else if (isStale && updatedAt != null) {
+      subtitle = 'Última señal hace ${_timeAgo(updatedAt)}';
+    } else {
+      subtitle = 'En vivo · actualizado hace ${_timeAgo(updatedAt!)}';
+    }
+
+    return Row(
+      children: [
+        Icon(active ? Icons.location_on : Icons.location_off, color: color, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            subtitle,
+            style: AppTextStyles.labelSmall.copyWith(color: color),
+          ),
+        ),
+        if (location != null)
+          TextButton(
+            onPressed: () => launchUrl(
+              Uri.parse('https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}'),
+              mode: LaunchMode.externalApplication,
+            ),
+            child: const Text('Ver en mapa'),
+          ),
+      ],
+    );
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 60) return '${diff.inSeconds}s';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min';
+    if (diff.inHours < 24) return '${diff.inHours} h';
+    return '${diff.inDays} d';
   }
 
   final _userSearchCtrl = TextEditingController();
@@ -1007,10 +1084,21 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
     return Padding(
       padding: const EdgeInsets.all(12),
       child: TextField(
+        controller: _searchController,
         style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+        onChanged: (v) => setState(() => _searchQuery = v.toLowerCase().trim()),
         decoration: InputDecoration(
           hintText: hint,
           prefixIcon: const Icon(Icons.search, color: AppColors.textSecondaryDark),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, color: AppColors.textSecondaryDark),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
         ),
       ),
     );
@@ -1595,7 +1683,7 @@ class _AdminGateDialogState extends State<_AdminGateDialog> {
   }
 
   void _checkPassword() {
-    if (_ctrl.text == 'ShinraSakujo') {
+    if (_ctrl.text == AppConstants.adminGatePassword) {
       Navigator.of(context).pop(true);
     } else {
       setState(() => _error = 'Contraseña incorrecta');
@@ -1732,19 +1820,39 @@ class _CreateCommerceSheetState extends State<_CreateCommerceSheet> {
     (CommerceCategory.fastFood, '🍔 Comida Rápida'),
     (CommerceCategory.bar, '🍺 Bar / Pub'),
     (CommerceCategory.bakery, '🥐 Panadería'),
+    (CommerceCategory.iceCream, '🍦 Heladería'),
+    (CommerceCategory.butcher, '🥩 Carnicería'),
+    (CommerceCategory.greengrocer, '🥬 Verdulería'),
+    (CommerceCategory.kiosk, '🏪 Kiosco'),
     (CommerceCategory.pharmacies, '💊 Farmacia'),
     (CommerceCategory.health, '🏥 Salud'),
     (CommerceCategory.beauty, '💄 Belleza'),
+    (CommerceCategory.veterinary, '🩺 Veterinaria'),
+    (CommerceCategory.opticians, '👓 Óptica'),
+    (CommerceCategory.gym, '🏋️ Gimnasio'),
     (CommerceCategory.clothing, '👕 Ropa'),
     (CommerceCategory.supermarket, '🛒 Supermercado'),
     (CommerceCategory.hardware, '🔩 Ferretería'),
     (CommerceCategory.jewelry, '💎 Joyería'),
-    (CommerceCategory.market, '🏪 Feria / Mercado'),
+    (CommerceCategory.market, '🏬 Feria / Mercado'),
+    (CommerceCategory.furniture, '🛋️ Mueblería / Hogar'),
+    (CommerceCategory.electronics, '📺 Electrodomésticos'),
+    (CommerceCategory.bookstore, '📖 Librería'),
+    (CommerceCategory.toyStore, '🧸 Juguetería'),
+    (CommerceCategory.babyStore, '👶 Bebés y Maternidad'),
+    (CommerceCategory.florist, '💐 Florería'),
+    (CommerceCategory.constructionMaterials, '🧱 Materiales de Construcción'),
+    (CommerceCategory.automotive, '🚗 Automotriz'),
+    (CommerceCategory.autoPartsRepair, '🚙 Repuestos Auto/Moto'),
+    (CommerceCategory.tireShop, '🛞 Gomería'),
+    (CommerceCategory.carWash, '🚿 Lavadero'),
+    (CommerceCategory.bikeShop, '🚲 Bicicletería'),
     (CommerceCategory.streetVendor, '🛍️ Vendedor Ambulante'),
     (CommerceCategory.entrepreneur, '🚀 Emprendimiento'),
     (CommerceCategory.artisans, '🎨 Artesanos'),
     (CommerceCategory.services, '🔧 Servicios'),
-    (CommerceCategory.automotive, '🚗 Automotriz'),
+    (CommerceCategory.laundry, '🧺 Lavandería / Tintorería'),
+    (CommerceCategory.realEstate, '🏠 Inmobiliaria'),
     (CommerceCategory.education, '📚 Educación'),
     (CommerceCategory.technology, '💻 Tecnología'),
     (CommerceCategory.entertainment, '🎭 Entretenimiento'),
@@ -1774,8 +1882,20 @@ class _CreateCommerceSheetState extends State<_CreateCommerceSheet> {
       final lng = double.tryParse(_lng.text) ?? -58.3816;
       final adminUid = FirebaseAuth.instance.currentUser?.uid ?? 'admin';
 
+      final name = _name.text.trim();
+      final nameLower = name.toLowerCase();
+      final searchTerms = <String>{};
+      for (int i = 1; i <= nameLower.length; i++) {
+        searchTerms.add(nameLower.substring(0, i));
+      }
+      for (final word in nameLower.split(' ')) {
+        if (word.length > 1) searchTerms.add(word);
+      }
+      searchTerms.add(_category.name.toLowerCase());
+      searchTerms.add(_city.text.trim().toLowerCase());
+
       await widget.db.collection(AppConstants.commercesCollection).add({
-        'name': _name.text.trim(),
+        'name': name,
         'description': _description.text.trim(),
         'category': _category.name,
         'subCategories': [],
@@ -1792,8 +1912,9 @@ class _CreateCommerceSheetState extends State<_CreateCommerceSheet> {
         'socialLinks': {},
         'businessHours': {},
         'tags': [],
+        'searchTerms': searchTerms.toList(),
         'status': 'active',
-        'plan': 'basic',
+        'plan': 'free',
         'ownerId': adminUid,
         'rating': 0.0,
         'reviewCount': 0,

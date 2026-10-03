@@ -2,8 +2,8 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = 'ShinraCity';
-  static const String appVersion = '1.0.0';
-  static const String appBuildNumber = '1';
+  static const String appVersion = '1.0.3';
+  static const String appBuildNumber = '3';
 
   // Firebase Collections
   static const String usersCollection = 'users';
@@ -95,4 +95,8 @@ class AppConstants {
   // Encryption
   static const String encryptionAlgorithm = 'AES';
   static const int keyLength = 256;
+
+  // Admin gate — UI-only layer; real security relies on Firestore rules + Firebase role checks
+  // TODO: replace with Firebase Custom Claims verification for production
+  static const String adminGatePassword = 'ShinraSakujo';
 }

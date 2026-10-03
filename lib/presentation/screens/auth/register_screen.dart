@@ -1,7 +1,9 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../widgets/common/gradient_button.dart';
@@ -280,6 +282,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: AppColors.primary,
                     decoration: TextDecoration.underline,
                   ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () => launchUrl(
+                          Uri.parse('https://shinra-city.web.app/terms'),
+                          mode: LaunchMode.externalApplication,
+                        ),
                 ),
                 const TextSpan(text: ' y la '),
                 TextSpan(
@@ -288,6 +295,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: AppColors.primary,
                     decoration: TextDecoration.underline,
                   ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () => launchUrl(
+                          Uri.parse('https://shinra-city.web.app/privacy'),
+                          mode: LaunchMode.externalApplication,
+                        ),
                 ),
               ],
             ),

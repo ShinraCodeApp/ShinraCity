@@ -54,6 +54,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _loading = true;
   String? _error;
   StreamSubscription<QuerySnapshot>? _sub;
+  String? _userId;
 
   @override
   void initState() {
@@ -65,9 +66,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       setState(() => _loading = false);
       return;
     }
+    _userId = user.id;
+    _subscribe(user.id);
+  }
+
+  void _subscribe(String userId) {
+    _sub?.cancel();
+    setState(() { _loading = true; _error = null; });
     _sub = FirebaseFirestore.instance
         .collection('users')
-        .doc(user.id)
+        .doc(userId)
         .collection('notifications')
         .orderBy('createdAt', descending: true)
         .limit(50)
@@ -403,7 +411,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           const SizedBox(height: 16),
           const Text('No se pudieron cargar las notificaciones'),
           const SizedBox(height: 12),
-          ElevatedButton(onPressed: () => setState(() { _loading = true; _error = null; }), child: const Text('Reintentar')),
+          ElevatedButton(
+            onPressed: () { if (_userId != null) _subscribe(_userId!); },
+            child: const Text('Reintentar'),
+          ),
         ],
       ),
     );

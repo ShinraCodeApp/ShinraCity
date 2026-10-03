@@ -77,7 +77,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
             ndk {
-                debugSymbolLevel 'NONE'
+                debugSymbolLevel 'SYMBOL_TABLE'
             }
         }
     }

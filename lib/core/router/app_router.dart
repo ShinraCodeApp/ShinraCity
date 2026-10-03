@@ -55,6 +55,8 @@ class AppRouter {
             loc == '/register' ||
             loc == '/onboarding';
 
+        if (authState is AuthLoading) return null;
+
         if (authState is AuthUnauthenticated && !isPublicPage) {
           return '/login';
         }
@@ -173,21 +175,29 @@ class AppRouter {
         ),
         GoRoute(
           path: '/commerce/:id/create-promotion',
-          builder: (_, state) => BlocProvider(
-            create: (_) => GetIt.instance<PromotionsBloc>(),
-            child: CreatePromotionScreen(
-              commerceId: state.pathParameters['id']!,
-            ),
-          ),
+          builder: (_, state) {
+            final extra = state.extra as Map<String, dynamic>?;
+            return BlocProvider(
+              create: (_) => GetIt.instance<PromotionsBloc>(),
+              child: CreatePromotionScreen(
+                commerceId: state.pathParameters['id']!,
+                commerceName: extra?['commerceName'] as String?,
+              ),
+            );
+          },
         ),
         GoRoute(
           path: '/commerce/:id/promotions',
-          builder: (_, state) => BlocProvider(
-            create: (_) => GetIt.instance<PromotionsBloc>(),
-            child: PromotionsListScreen(
-              commerceId: state.pathParameters['id']!,
-            ),
-          ),
+          builder: (_, state) {
+            final extra = state.extra as Map<String, dynamic>?;
+            return BlocProvider(
+              create: (_) => GetIt.instance<PromotionsBloc>(),
+              child: PromotionsListScreen(
+                commerceId: state.pathParameters['id']!,
+                commerceName: extra?['commerceName'] as String?,
+              ),
+            );
+          },
         ),
         GoRoute(
           path: '/commerce/:id/edit-promotion/:promotionId',

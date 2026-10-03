@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../../domain/entities/coupon_entity.dart';
@@ -9,6 +10,8 @@ abstract class CouponsEvent extends Equatable {
   @override
   List<Object?> get props => [];
 }
+
+class WatchUserCouponsEvent extends CouponsEvent {}
 
 class LoadUserCouponsEvent extends CouponsEvent {
   final CouponStatus? status;
@@ -47,6 +50,14 @@ class CancelCouponEvent extends CouponsEvent {
   List<Object?> get props => [couponId];
 }
 
+class _CouponsStreamUpdated extends CouponsEvent {
+  final List<CouponEntity> coupons;
+  _CouponsStreamUpdated(this.coupons);
+
+  @override
+  List<Object?> get props => [coupons];
+}
+
 // States
 abstract class CouponsState extends Equatable {
   @override
@@ -81,6 +92,15 @@ class CouponValidated extends CouponsState {
   List<Object?> get props => [result];
 }
 
+// Emitted when the business owner redeems a coupon externally (via QR scan)
+class CouponRedeemedExternally extends CouponsState {
+  final CouponEntity coupon;
+  CouponRedeemedExternally(this.coupon);
+
+  @override
+  List<Object?> get props => [coupon];
+}
+
 class CouponsError extends CouponsState {
   final String message;
   CouponsError(this.message);
@@ -95,6 +115,10 @@ class CouponsBloc extends Bloc<CouponsEvent, CouponsState> {
   final AnalyticsService? _analytics;
   final String _userId;
 
+  StreamSubscription<List<CouponEntity>>? _couponsSub;
+  List<CouponEntity> _lastCoupons = [];
+  bool _initialLoad = true;
+
   CouponsBloc({
     required CouponRepository couponRepository,
     required String userId,
@@ -103,10 +127,50 @@ class CouponsBloc extends Bloc<CouponsEvent, CouponsState> {
         _analytics = analytics,
         _userId = userId,
         super(CouponsInitial()) {
+    on<WatchUserCouponsEvent>(_onWatchUserCoupons);
     on<LoadUserCouponsEvent>(_onLoadUserCoupons);
     on<ClaimCouponEvent>(_onClaimCoupon);
     on<ValidateCouponEvent>(_onValidateCoupon);
     on<CancelCouponEvent>(_onCancelCoupon);
+    on<_CouponsStreamUpdated>(_onCouponsStreamUpdated);
+  }
+
+  Future<void> _onWatchUserCoupons(
+    WatchUserCouponsEvent event,
+    Emitter<CouponsState> emit,
+  ) async {
+    emit(CouponsLoading());
+    _couponsSub?.cancel();
+    _initialLoad = true;
+    _couponsSub = _couponRepository.watchUserCoupons(_userId).listen(
+      (coupons) => add(_CouponsStreamUpdated(coupons)),
+      onError: (_) {},
+    );
+  }
+
+  Future<void> _onCouponsStreamUpdated(
+    _CouponsStreamUpdated event,
+    Emitter<CouponsState> emit,
+  ) async {
+    if (!_initialLoad) {
+      // Detect coupons that were available before and are now used (externally redeemed)
+      final prevAvailableIds = _lastCoupons
+          .where((c) => c.status == CouponStatus.available)
+          .map((c) => c.id)
+          .toSet();
+
+      final externallyRedeemed = event.coupons.where(
+        (c) => c.status == CouponStatus.used && prevAvailableIds.contains(c.id),
+      );
+
+      if (externallyRedeemed.isNotEmpty) {
+        emit(CouponRedeemedExternally(externallyRedeemed.first));
+      }
+    }
+
+    _lastCoupons = event.coupons;
+    _initialLoad = false;
+    emit(CouponsLoaded(event.coupons));
   }
 
   Future<void> _onLoadUserCoupons(
@@ -183,7 +247,13 @@ class CouponsBloc extends Bloc<CouponsEvent, CouponsState> {
     );
     result.fold(
       (failure) => emit(CouponsError(failure.message)),
-      (_) => add(LoadUserCouponsEvent()),
+      (_) => add(WatchUserCouponsEvent()),
     );
+  }
+
+  @override
+  Future<void> close() {
+    _couponsSub?.cancel();
+    return super.close();
   }
 }

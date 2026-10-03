@@ -1,13 +1,17 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../services/biometric_service.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../widgets/common/gradient_button.dart';
 import '../../widgets/common/social_auth_button.dart';
 import '../../widgets/common/shinra_text_field.dart';
+import '../../../services/injection_container.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,8 +24,30 @@ class _LoginScreenState extends State<LoginScreen> {
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _biometricService = sl<BiometricService>();
+
   bool _obscurePassword = true;
   bool _rememberMe = true;
+  bool _biometricAvailable = false;
+  bool _biometricEnabled = false;
+  bool _usedEmailLogin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometric();
+  }
+
+  Future<void> _checkBiometric() async {
+    final available = await _biometricService.isAvailable();
+    final enabled = available ? await _biometricService.isEnabled() : false;
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+        _biometricEnabled = enabled;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -38,6 +64,18 @@ class _LoginScreenState extends State<LoginScreen> {
           if (state is AuthAuthenticated) {
             final prefs = await SharedPreferences.getInstance();
             await prefs.setBool('keep_logged_in', _rememberMe);
+
+            // Si el login fue con email/password y biometría no está habilitada aún, ofrecer
+            if (_usedEmailLogin && _biometricAvailable && !_biometricEnabled && context.mounted) {
+              final enabled = await _showEnableBiometricDialog(context);
+              if (enabled && context.mounted) {
+                await _biometricService.saveCredentials(
+                  email: _identifierController.text.trim(),
+                  password: _passwordController.text,
+                );
+              }
+            }
+
             if (context.mounted) context.go('/map');
           } else if (state is AuthPasswordResetSent) {
             showDialog(
@@ -89,9 +127,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 32),
                   _buildForm(),
                   const SizedBox(height: 24),
+                  if (_biometricEnabled) _buildBiometricButton(),
                   _buildSocialAuth(),
                   const SizedBox(height: 32),
                   _buildRegisterLink(),
+                  const SizedBox(height: 20),
+                  _buildPrivacyNotice(),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -230,6 +272,40 @@ class _LoginScreenState extends State<LoginScreen> {
     ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0);
   }
 
+  Widget _buildBiometricButton() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Center(
+        child: Column(
+          children: [
+            GestureDetector(
+              onTap: _handleBiometricLogin,
+              child: Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.primary, width: 2),
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                ),
+                child: const Icon(
+                  Icons.fingerprint,
+                  size: 36,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Ingresar con huella',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(delay: 450.ms).scale(begin: const Offset(0.8, 0.8));
+  }
+
   Widget _buildSocialAuth() {
     return Column(
       children: [
@@ -294,19 +370,70 @@ class _LoginScreenState extends State<LoginScreen> {
     ).animate().fadeIn(delay: 600.ms);
   }
 
+  Widget _buildPrivacyNotice() {
+    return Center(
+      child: RichText(
+        textAlign: TextAlign.center,
+        text: TextSpan(
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark),
+          children: [
+            const TextSpan(text: 'Al ingresar aceptás nuestra '),
+            TextSpan(
+              text: 'Política de Privacidad',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.primary,
+                decoration: TextDecoration.underline,
+              ),
+              recognizer: TapGestureRecognizer()
+                ..onTap = () => launchUrl(
+                      Uri.parse('https://shinra-city.web.app/privacy'),
+                      mode: LaunchMode.externalApplication,
+                    ),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(delay: 650.ms);
+  }
+
   void _handleLogin() {
     if (!_formKey.currentState!.validate()) return;
+    _usedEmailLogin = true;
     context.read<AuthBloc>().add(SignInWithEmailEvent(
       email: _identifierController.text.trim(),
       password: _passwordController.text,
     ));
   }
 
+  Future<void> _handleBiometricLogin() async {
+    final authenticated = await _biometricService.authenticate();
+    if (!authenticated || !mounted) return;
+
+    final credentials = await _biometricService.getCredentials();
+    if (credentials == null || !mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se encontraron credenciales guardadas'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    _usedEmailLogin = false; // ya tiene huella habilitada, no ofrecer de nuevo
+    context.read<AuthBloc>().add(SignInWithEmailEvent(
+      email: credentials['email']!,
+      password: credentials['password']!,
+    ));
+  }
+
   void _handleGoogleLogin() {
+    _usedEmailLogin = false;
     context.read<AuthBloc>().add(SignInWithGoogleEvent());
   }
 
   void _handleAppleLogin() {
+    _usedEmailLogin = false;
     context.read<AuthBloc>().add(SignInWithAppleEvent());
   }
 
@@ -316,7 +443,6 @@ class _LoginScreenState extends State<LoginScreen> {
       context.read<AuthBloc>().add(SendPasswordResetEvent(email: id));
       return;
     }
-    // Ask for email via dialog
     final emailCtrl = TextEditingController(text: id.contains('@') ? id : '');
     showDialog(
       context: context,
@@ -363,5 +489,89 @@ class _LoginScreenState extends State<LoginScreen> {
         ],
       ),
     );
+  }
+
+  Future<bool> _showEnableBiometricDialog(BuildContext context) async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.backgroundCard,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: AppColors.primaryGradient,
+              ),
+              child: const Icon(Icons.fingerprint, size: 40, color: Colors.white),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Activar acceso con huella',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'La próxima vez que abras la app podés ingresar directamente con tu huella digital, sin escribir tu contraseña.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textSecondaryDark,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.pop(ctx, true),
+                icon: const Icon(Icons.fingerprint, color: Colors.white),
+                label: const Text('Activar huella digital'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(
+                  'Ahora no',
+                  style: TextStyle(color: AppColors.textSecondaryDark, fontSize: 15),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    return result ?? false;
   }
 }

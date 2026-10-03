@@ -1,7 +1,7 @@
 name: shinra_city
 description: ShinraCity - Plataforma inteligente de descubrimiento de comercios, promociones y recompensas basada en geolocalización.
 publish_to: 'none'
-version: 1.0.3+3
+version: 1.0.7+15
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -70,6 +70,7 @@ dependencies:
 
   # Biometric Auth
   local_auth: ^2.1.7
+  flutter_secure_storage: ^9.0.0
 
   # Crypto & Security
   crypto: ^3.0.3

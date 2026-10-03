@@ -35,6 +35,7 @@ abstract class AuthRepository {
     String? displayName,
     String? photoUrl,
     String? phoneNumber,
+    String? bio,
   });
 
   Future<Either<Failure, void>> updateFcmToken(String token);

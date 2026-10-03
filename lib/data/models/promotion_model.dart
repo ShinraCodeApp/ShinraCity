@@ -46,6 +46,11 @@ class PromotionModel extends PromotionEntity {
     return PromotionModel.fromMap(data, doc.id);
   }
 
+  static DateTime? _toDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    return null;
+  }
+
   factory PromotionModel.fromMap(Map<String, dynamic> map, String id) {
     LatLng? geoLocation;
     if (map['geoLocation'] != null) {
@@ -75,9 +80,8 @@ class PromotionModel extends PromotionEntity {
       ),
       discountValue: (map['discountValue'] ?? 0).toDouble(),
       discountDescription: map['discountDescription'],
-      startDate: (map['startDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      endDate: (map['endDate'] as Timestamp?)?.toDate() ??
-          DateTime.now().add(const Duration(days: 7)),
+      startDate: _toDate(map['startDate']) ?? DateTime.now(),
+      endDate: _toDate(map['endDate']) ?? DateTime.now().add(const Duration(days: 7)),
       totalSlots: map['totalSlots'],
       usedSlots: map['usedSlots'] ?? 0,
       dailyLimit: map['dailyLimit'],
@@ -95,7 +99,7 @@ class PromotionModel extends PromotionEntity {
       pointsAwarded: map['pointsAwarded'] ?? 10,
       requiresCode: map['requiresCode'] ?? false,
       promoCode: map['promoCode'],
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: _toDate(map['createdAt']) ?? DateTime.now(),
       viewCount: map['viewCount'] ?? 0,
       claimCount: map['claimCount'] ?? 0,
       savedAmount: (map['savedAmount'] as num?)?.toDouble(),

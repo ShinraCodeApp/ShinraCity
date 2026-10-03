@@ -118,12 +118,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildNavTile(
                   icon: Icons.shield_outlined,
                   label: 'Política de privacidad',
-                  onTap: () => _launchUrl('https://shinracity.app/privacy'),
+                  onTap: () => _launchUrl('https://shinra-city.web.app/privacy'),
                 ),
                 _buildNavTile(
                   icon: Icons.description_outlined,
                   label: 'Términos y condiciones',
-                  onTap: () => _launchUrl('https://shinracity.app/terms'),
+                  onTap: () => _launchUrl('https://shinra-city.web.app/terms'),
                 ),
               ]).animate(delay: 160.ms).fadeIn().slideY(begin: 0.05, end: 0),
 
@@ -133,7 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildNavTile(
                   icon: Icons.help_outline,
                   label: 'Centro de ayuda',
-                  onTap: () => _launchUrl('https://shinracity.app/help'),
+                  onTap: () => _launchUrl('https://shinra-city.web.app/help'),
                 ),
                 _buildNavTile(
                   icon: Icons.bug_report_outlined,
@@ -143,7 +143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildNavTile(
                   icon: Icons.star_outline,
                   label: 'Calificar la app',
-                  onTap: () => _launchUrl('https://shinracity.app/rate'),
+                  onTap: () => _launchUrl('https://play.google.com/store/apps/details?id=com.shinracity.app'),
                 ),
               ]).animate(delay: 240.ms).fadeIn().slideY(begin: 0.05, end: 0),
 

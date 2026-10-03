@@ -66,17 +66,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           return CustomScrollView(
             slivers: [
               SliverToBoxAdapter(child: _buildTopThree(state.entries, state.currentUserId)),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (_, i) {
-                    if (i >= 3 && i < state.entries.length) {
-                      return _buildEntry(state.entries[i], state.currentUserId);
-                    }
-                    return null;
-                  },
-                  childCount: state.entries.length,
+              if (state.entries.length > 3)
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (_, i) => _buildEntry(state.entries[i + 3], state.currentUserId),
+                    childCount: state.entries.length - 3,
+                  ),
                 ),
-              ),
             ],
           );
         }

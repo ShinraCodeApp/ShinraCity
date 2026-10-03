@@ -28,6 +28,8 @@ class _RewardsScreenState extends State<RewardsScreen>
     _tabController = TabController(length: 3, vsync: this);
     context.read<PointsBloc>().add(const LoadUserPoints());
     context.read<PointsBloc>().add(const LoadAvailableRewards());
+    context.read<PointsBloc>().add(const LoadAchievements());
+    context.read<PointsBloc>().add(const LoadPointsHistory());
   }
 
   @override

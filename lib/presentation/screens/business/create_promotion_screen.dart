@@ -14,11 +14,13 @@ import '../../widgets/common/shinra_text_field.dart';
 
 class CreatePromotionScreen extends StatefulWidget {
   final String commerceId;
+  final String? commerceName;
   final PromotionEntity? existing;
 
   const CreatePromotionScreen({
     super.key,
     required this.commerceId,
+    this.commerceName,
     this.existing,
   });
 
@@ -896,7 +898,7 @@ class _CreatePromotionScreenState extends State<CreatePromotionScreen> {
     final promotion = PromotionEntity(
       id: widget.existing?.id ?? '',
       commerceId: widget.commerceId,
-      commerceName: widget.existing?.commerceName ?? '',
+      commerceName: widget.existing?.commerceName ?? widget.commerceName ?? '',
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim().isEmpty
           ? null

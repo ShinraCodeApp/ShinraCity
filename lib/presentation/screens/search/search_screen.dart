@@ -289,6 +289,26 @@ class _SearchScreenState extends State<SearchScreen> {
       CommerceCategory.health: 'Salud',
       CommerceCategory.education: 'Educación',
       CommerceCategory.automotive: 'Autos',
+      CommerceCategory.autoPartsRepair: 'Repuestos',
+      CommerceCategory.tireShop: 'Gomería',
+      CommerceCategory.carWash: 'Lavadero',
+      CommerceCategory.bikeShop: 'Bicicletería',
+      CommerceCategory.veterinary: 'Veterinaria',
+      CommerceCategory.opticians: 'Óptica',
+      CommerceCategory.gym: 'Gimnasio',
+      CommerceCategory.laundry: 'Lavandería',
+      CommerceCategory.furniture: 'Mueblería',
+      CommerceCategory.electronics: 'Electrodomésticos',
+      CommerceCategory.bookstore: 'Librería',
+      CommerceCategory.toyStore: 'Juguetería',
+      CommerceCategory.babyStore: 'Bebés',
+      CommerceCategory.florist: 'Florería',
+      CommerceCategory.constructionMaterials: 'Construcción',
+      CommerceCategory.realEstate: 'Inmobiliaria',
+      CommerceCategory.iceCream: 'Heladería',
+      CommerceCategory.butcher: 'Carnicería',
+      CommerceCategory.greengrocer: 'Verdulería',
+      CommerceCategory.kiosk: 'Kiosco',
       CommerceCategory.other: 'Otros',
     };
     return labels[cat] ?? cat.name;
@@ -326,6 +346,46 @@ class _SearchScreenState extends State<SearchScreen> {
         return Icons.school;
       case CommerceCategory.automotive:
         return Icons.directions_car;
+      case CommerceCategory.autoPartsRepair:
+        return Icons.car_repair;
+      case CommerceCategory.tireShop:
+        return Icons.album;
+      case CommerceCategory.carWash:
+        return Icons.local_car_wash;
+      case CommerceCategory.bikeShop:
+        return Icons.pedal_bike;
+      case CommerceCategory.veterinary:
+        return Icons.medical_services;
+      case CommerceCategory.opticians:
+        return Icons.visibility;
+      case CommerceCategory.gym:
+        return Icons.fitness_center;
+      case CommerceCategory.laundry:
+        return Icons.local_laundry_service;
+      case CommerceCategory.furniture:
+        return Icons.chair;
+      case CommerceCategory.electronics:
+        return Icons.kitchen;
+      case CommerceCategory.bookstore:
+        return Icons.menu_book;
+      case CommerceCategory.toyStore:
+        return Icons.toys;
+      case CommerceCategory.babyStore:
+        return Icons.child_friendly;
+      case CommerceCategory.florist:
+        return Icons.local_florist;
+      case CommerceCategory.constructionMaterials:
+        return Icons.foundation;
+      case CommerceCategory.realEstate:
+        return Icons.home_work;
+      case CommerceCategory.iceCream:
+        return Icons.icecream;
+      case CommerceCategory.butcher:
+        return Icons.kebab_dining;
+      case CommerceCategory.greengrocer:
+        return Icons.eco;
+      case CommerceCategory.kiosk:
+        return Icons.store;
       default:
         return Icons.category;
     }
