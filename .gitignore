@@ -34,3 +34,4 @@ Thumbs.db
 # cache local de Firebase Hosting
 .firebase/
 test_rules/node_modules/
+*-debug.log
