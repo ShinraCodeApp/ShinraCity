@@ -153,7 +153,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   _buildSocialAuth(),
                   const SizedBox(height: 32),
                   _buildRegisterLink(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: TextButton(
+                      // vuelve al mapa sin cuenta (si llegó desde el aviso,
+                      // cierra el login; si no, lo reemplaza)
+                      onPressed: () =>
+                          context.canPop() ? context.pop() : context.go('/map'),
+                      child: Text(
+                        'Explorar sin cuenta',
+                        style: AppTextStyles.bodyMedium
+                            .copyWith(color: AppColors.textSecondaryDark),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   _buildPrivacyNotice(),
                   const SizedBox(height: 16),
                 ],

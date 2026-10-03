@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/device_id.dart';
+import '../../../core/widgets/account_required_sheet.dart';
 import '../../../domain/entities/commerce_entity.dart';
 import '../../../domain/entities/promotion_entity.dart';
 import '../../../domain/entities/review_entity.dart';
@@ -1026,19 +1027,25 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
                       .copyWith(color: AppColors.textSecondaryDark),
                 ),
               const Spacer(),
-              if (user != null)
-                TextButton.icon(
-                  icon: const Icon(Icons.rate_review_outlined, size: 16),
-                  label: const Text('Reseñar'),
-                  onPressed: () => ReviewSubmissionSheet.show(
+              TextButton.icon(
+                icon: const Icon(Icons.rate_review_outlined, size: 16),
+                label: const Text('Reseñar'),
+                onPressed: () {
+                  if (user == null) {
+                    requireAccount(context,
+                        reason: 'Contá tu experiencia y ayudá a otros a elegir.');
+                    return;
+                  }
+                  ReviewSubmissionSheet.show(
                     context,
                     commerceId: widget.commerceId,
                     userId: user.uid,
                     userName: user.displayName ?? 'Usuario',
                     userPhotoUrl: user.photoURL,
                     onReviewSubmitted: _loadReviews,
-                  ),
-                ),
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -1139,12 +1146,20 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
   }
 
   void _toggleFavorite() {
+    if (!requireAccount(context,
+        reason: 'Guardá tus comercios favoritos para encontrarlos rápido.')) {
+      return;
+    }
     context
         .read<CommerceBloc>()
         .add(ToggleFavoriteEvent(widget.commerceId));
   }
 
   void _toggleFollow() {
+    if (!requireAccount(context,
+        reason: 'Seguí este comercio y enterate primero de sus promociones.')) {
+      return;
+    }
     context
         .read<CommerceBloc>()
         .add(ToggleFollowEvent(widget.commerceId));
@@ -1191,6 +1206,10 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen>
 
   void _claimPromotion(PromotionEntity promotion) {
     if (_isClaiming) return;
+    if (!requireAccount(context,
+        reason: 'Guardá este cupón para usarlo en el comercio y sumá puntos.')) {
+      return;
+    }
     setState(() => _isClaiming = true);
     context.read<CouponsBloc>().add(
       ClaimCouponEvent(promotionId: promotion.id, deviceId: _deviceId),

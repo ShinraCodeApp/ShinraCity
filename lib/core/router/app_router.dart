@@ -47,21 +47,26 @@ class AppRouter {
     bool showOnboarding = false,
   }) {
     _instance = GoRouter(
-      initialLocation: showOnboarding ? '/onboarding' : '/login',
+      initialLocation: showOnboarding ? '/onboarding' : '/map',
       redirect: (context, state) {
         final authState = context.read<AuthBloc>().state;
         final loc = state.matchedLocation;
-        final isPublicPage = loc == '/login' ||
+        final isAuthPage = loc == '/login' ||
             loc == '/register' ||
             loc == '/onboarding';
+        // Sin cuenta se puede mirar: mapa, búsqueda y detalle de comercio.
+        // Lo que guarda algo (cupones, puntos, perfil) pide cuenta.
+        final isGuestPage = loc == '/map' ||
+            loc == '/search' ||
+            RegExp(r'^/commerce/[^/]+$').hasMatch(loc);
 
         if (authState is AuthLoading) return null;
 
-        if (authState is AuthUnauthenticated && !isPublicPage) {
+        if (authState is AuthUnauthenticated && !isAuthPage && !isGuestPage) {
           return '/login';
         }
 
-        if (authState is AuthAuthenticated && isPublicPage) {
+        if (authState is AuthAuthenticated && isAuthPage) {
           return '/map';
         }
 

@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
+import 'account_required_sheet.dart';
 
 class MainShell extends StatelessWidget {
   final Widget child;
@@ -46,8 +47,12 @@ class _ShinraBottomNav extends StatelessWidget {
                 activeIcon: Icons.confirmation_num,
                 label: 'Cupones',
                 isActive: location == '/coupons',
-                onTap: () => context.go('/coupons'),
-                badge: 3,
+                onTap: () {
+                  if (requireAccount(context,
+                      reason: 'Guardá cupones de los comercios cerca tuyo y usalos cuando quieras.')) {
+                    context.go('/coupons');
+                  }
+                },
               ),
               _CenterFAB(
                 onTap: () => context.push('/search'),
@@ -57,14 +62,24 @@ class _ShinraBottomNav extends StatelessWidget {
                 activeIcon: Icons.star,
                 label: 'Rewards',
                 isActive: location == '/rewards',
-                onTap: () => context.go('/rewards'),
+                onTap: () {
+                  if (requireAccount(context,
+                      reason: 'Sumá puntos con cada cupón que uses y canjealos por recompensas.')) {
+                    context.go('/rewards');
+                  }
+                },
               ),
               _NavItem(
                 icon: Icons.person_outline,
                 activeIcon: Icons.person,
                 label: 'Perfil',
                 isActive: location == '/profile',
-                onTap: () => context.go('/profile'),
+                onTap: () {
+                  if (requireAccount(context,
+                      reason: 'Tu perfil guarda tus favoritos, los comercios que seguís y tu nivel.')) {
+                    context.go('/profile');
+                  }
+                },
               ),
             ],
           ),
@@ -80,7 +95,6 @@ class _NavItem extends StatelessWidget {
   final String label;
   final bool isActive;
   final VoidCallback onTap;
-  final int? badge;
 
   const _NavItem({
     required this.icon,
@@ -88,7 +102,6 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.isActive,
     required this.onTap,
-    this.badge,
   });
 
   @override
@@ -103,38 +116,10 @@ class _NavItem extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(
-                    isActive ? activeIcon : icon,
-                    color: isActive ? AppColors.primary : AppColors.textSecondaryDark,
-                    size: 24,
-                  ),
-                  if (badge != null && badge! > 0)
-                    Positioned(
-                      right: -6,
-                      top: -4,
-                      child: Container(
-                        width: 16,
-                        height: 16,
-                        decoration: const BoxDecoration(
-                          color: AppColors.secondary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            badge.toString(),
-                            style: const TextStyle(
-                              fontSize: 9,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+              Icon(
+                isActive ? activeIcon : icon,
+                color: isActive ? AppColors.primary : AppColors.textSecondaryDark,
+                size: 24,
               ),
               const SizedBox(height: 4),
               Text(
