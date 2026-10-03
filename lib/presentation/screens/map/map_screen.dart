@@ -11,7 +11,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../domain/entities/commerce_entity.dart';
 import '../../../domain/entities/promotion_entity.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../services/analytics_service.dart';
+import '../../../services/landmarks_service.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/map/map_bloc.dart';
 import '../../widgets/map/commerce_bottom_sheet.dart';
@@ -44,6 +46,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   CommerceCategory? _activeCategory;
   Timer? _cameraDebounce;
   DateTime? _lastNearbyNotification;
+
+  // Plazas, monumentos, museos, etc. (OpenStreetMap)
+  final LandmarksService _landmarksService = LandmarksService();
+  List<Landmark> _landmarks = [];
+  bool _showLandmarks = true;
+  LatLng? _lastLandmarksCenter;
 
   // CARTO's free anonymous basemap tiles now require an API key, so dark
   // mode is faked with a color-inversion filter over plain OSM tiles —
@@ -89,6 +97,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     if (permission == LocationPermission.deniedForever) {
       if (mounted) {
         context.read<MapBloc>().add(LoadNearbyCommerces(location: _currentPosition));
+        _loadLandmarks(_currentPosition);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Activá la ubicación en Ajustes para ver comercios cerca tuyo'),
@@ -115,6 +124,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       _mapController.move(_currentPosition, AppConstants.defaultZoom);
       context.read<MapBloc>().add(LoadNearbyCommerces(location: _currentPosition));
       context.read<MapBloc>().add(LoadNearbyPromotions(location: _currentPosition));
+      _loadLandmarks(_currentPosition);
 
       _locationStream = Geolocator.getPositionStream(
         locationSettings: const LocationSettings(
@@ -125,6 +135,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     } catch (e) {
       if (mounted) {
         context.read<MapBloc>().add(LoadNearbyCommerces(location: _currentPosition));
+        _loadLandmarks(_currentPosition);
       }
     }
   }
@@ -222,6 +233,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               userAgentPackageName: 'com.shinracity.app',
             ),
           CircleLayer(circles: _circles),
+          // debajo de los comercios, para que no tapen sus marcadores
+          if (_showLandmarks) MarkerLayer(markers: _buildLandmarkMarkers()),
           MarkerLayer(markers: _markers),
           MarkerLayer(
             markers: [
@@ -305,6 +318,13 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             icon: _isSatellite ? Icons.map : Icons.satellite,
             onTap: _toggleMapType,
             tooltip: _isSatellite ? 'Vista mapa' : 'Vista satélite',
+          ),
+          const SizedBox(height: 12),
+          _buildControlButton(
+            icon: Icons.account_balance_outlined,
+            onTap: _toggleLandmarks,
+            tooltip: _showLandmarks ? 'Ocultar lugares de interés' : 'Ver plazas y monumentos',
+            isActive: _showLandmarks,
           ),
           const SizedBox(height: 12),
           _buildControlButton(
@@ -649,8 +669,160 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           location: camera.center,
           radiusKm: AppConstants.nearbyRadiusKm * (20 - camera.zoom) / 10,
         ));
+        if (camera.zoom >= 13) _loadLandmarks(camera.center);
       });
     }
+  }
+
+  // ─── Lugares de interés ───────────────────────────────────────────────────
+
+  Future<void> _loadLandmarks(LatLng center) async {
+    if (!_showLandmarks) return;
+    // no repetir la consulta si el mapa se movió poco
+    final last = _lastLandmarksCenter;
+    if (last != null && const Distance().as(LengthUnit.Meter, last, center) < 800) return;
+    _lastLandmarksCenter = center;
+    try {
+      final found = await _landmarksService.nearby(center);
+      if (!mounted) return;
+      setState(() {
+        final byId = {for (final l in _landmarks) l.id: l};
+        for (final l in found) {
+          byId[l.id] = l;
+        }
+        _landmarks = byId.values.toList();
+      });
+    } catch (_) {
+      // sin internet o Overpass saturado: el mapa sigue andando sin lugares
+      _lastLandmarksCenter = null;
+    }
+  }
+
+  void _toggleLandmarks() {
+    setState(() => _showLandmarks = !_showLandmarks);
+    if (_showLandmarks) {
+      _lastLandmarksCenter = null;
+      _loadLandmarks(_mapController.camera.center);
+    }
+  }
+
+  List<Marker> _buildLandmarkMarkers() {
+    return _landmarks.map((l) {
+      return Marker(
+        point: l.location,
+        width: 30,
+        height: 30,
+        child: GestureDetector(
+          onTap: () => _showLandmarkSheet(l),
+          child: Container(
+            decoration: BoxDecoration(
+              color: l.type.color.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.5),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 4),
+              ],
+            ),
+            child: Icon(l.type.icon, color: Colors.white, size: 16),
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  void _showLandmarkSheet(Landmark l) {
+    final distance = const Distance().as(LengthUnit.Meter, _currentPosition, l.location);
+    final distanceText = distance < 1000
+        ? '${distance.round()} m'
+        : '${(distance / 1000).toStringAsFixed(1)} km';
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.backgroundCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: l.type.color,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(l.type.icon, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l.name,
+                          style: AppTextStyles.titleMedium
+                              .copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          '${l.type.label} · a $distanceText',
+                          style: AppTextStyles.bodySmall
+                              .copyWith(color: AppColors.textSecondaryDark),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (l.description != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  l.description!,
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondaryDark),
+                ),
+              ],
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.directions),
+                  label: const Text('Cómo llegar'),
+                  onPressed: () {
+                    Navigator.pop(sheetContext);
+                    launchUrl(
+                      Uri.parse(
+                        'https://www.google.com/maps/dir/?api=1'
+                        '&destination=${l.location.latitude},${l.location.longitude}',
+                      ),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Datos: © colaboradores de OpenStreetMap',
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.textSecondaryDark, fontSize: 10),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _centerOnLocation() {
