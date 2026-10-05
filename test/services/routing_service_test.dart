@@ -8,9 +8,8 @@ import 'package:shinra_city/services/routing_service.dart';
 
 class _FakeAdapter implements HttpClientAdapter {
   final Object body;
-  final int status;
   String? lastUrl;
-  _FakeAdapter(this.body, [this.status = 200]);
+  _FakeAdapter(this.body);
 
   @override
   Future<ResponseBody> fetch(
@@ -19,7 +18,7 @@ class _FakeAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     lastUrl = options.uri.toString();
-    return ResponseBody.fromString(jsonEncode(body), status, headers: {
+    return ResponseBody.fromString(jsonEncode(body), 200, headers: {
       Headers.contentTypeHeader: [Headers.jsonContentType],
     });
   }

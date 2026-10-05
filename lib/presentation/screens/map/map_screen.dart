@@ -128,31 +128,64 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       return;
     }
 
+    // 1) Al instante: la última ubicación que el celular ya conoce. Antes se
+    // esperaba al GPS (adentro de una casa puede tardar mucho) y mientras
+    // tanto el mapa mostraba Buenos Aires.
+    Position? last;
     try {
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      if (!mounted) return;
-      setState(() {
-        _currentPosition = LatLng(position.latitude, position.longitude);
-      });
-      _mapController.move(_currentPosition, AppConstants.defaultZoom);
-      context.read<MapBloc>().add(LoadNearbyCommerces(location: _currentPosition));
-      context.read<MapBloc>().add(LoadNearbyPromotions(location: _currentPosition));
-      _loadLandmarks(_currentPosition);
+      last = await Geolocator.getLastKnownPosition();
+    } catch (_) {}
+    if (last != null && mounted) _applyStartPosition(last);
 
-      _locationStream = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          distanceFilter: 50,
-        ),
-      ).listen(_onLocationUpdate);
-    } catch (e) {
-      if (mounted) {
-        context.read<MapBloc>().add(LoadNearbyCommerces(location: _currentPosition));
-        _loadLandmarks(_currentPosition);
-      }
+    // 2) Afinar con el GPS, con límite de tiempo; si no responde, por red.
+    Position? fresh;
+    try {
+      fresh = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+    } catch (_) {
+      try {
+        fresh = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 10),
+        );
+      } catch (_) {}
     }
+    if (!mounted) return;
+
+    if (fresh != null) {
+      final moved = last == null ||
+          const Distance().as(
+                LengthUnit.Meter,
+                LatLng(last.latitude, last.longitude),
+                LatLng(fresh.latitude, fresh.longitude),
+              ) >
+              200;
+      if (moved) _applyStartPosition(fresh);
+    } else if (last == null) {
+      // sin ninguna ubicación: se queda en la ciudad por defecto
+      context.read<MapBloc>().add(LoadNearbyCommerces(location: _currentPosition));
+      _loadLandmarks(_currentPosition);
+    }
+
+    // 3) Seguir la ubicación aunque la primera lectura haya fallado
+    _locationStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 50,
+      ),
+    ).listen(_onLocationUpdate, onError: (_) {});
+  }
+
+  void _applyStartPosition(Position position) {
+    setState(() {
+      _currentPosition = LatLng(position.latitude, position.longitude);
+    });
+    _mapController.move(_currentPosition, AppConstants.defaultZoom);
+    context.read<MapBloc>().add(LoadNearbyCommerces(location: _currentPosition));
+    context.read<MapBloc>().add(LoadNearbyPromotions(location: _currentPosition));
+    _loadLandmarks(_currentPosition);
   }
 
   void _onLocationUpdate(Position position) {
@@ -192,7 +225,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           _buildMap(),
           _buildSearchBar(),
           _buildCategoryFilter(),
-          _buildMapControls(),
+          // con los pasos de la ruta abiertos no hay lugar: los botones
+          // taparían la barra de categorías
+          if (!(_routeTarget != null && _showRouteSteps)) _buildMapControls(),
           _buildNearbyPanel(),
           if (_selectedCommerceId != null) _buildCommerceSheet(),
           if (_routeTarget != null) _buildRoutePanel(),
@@ -340,9 +375,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   Widget _buildMapControls() {
     return Positioned(
       right: 16,
-      bottom: _routeTarget != null
-          ? (_showRouteSteps ? 440 : 230)
-          : (_showNearbyPanel ? 300 : 100),
+      bottom: _routeTarget != null ? 230 : (_showNearbyPanel ? 300 : 100),
       child: Column(
         children: [
           _buildControlButton(
