@@ -2,8 +2,8 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = 'ShinraCity';
-  static const String appVersion = '1.0.8';
-  static const String appBuildNumber = '16';
+  static const String appVersion = '1.0.9';
+  static const String appBuildNumber = '17';
 
   // Firebase Collections
   static const String usersCollection = 'users';
