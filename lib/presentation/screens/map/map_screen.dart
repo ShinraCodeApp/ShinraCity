@@ -14,6 +14,7 @@ import '../../../domain/entities/promotion_entity.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../services/analytics_service.dart';
 import '../../../services/landmarks_service.dart';
+import '../../../services/routing_service.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/map/map_bloc.dart';
 import '../../widgets/map/commerce_bottom_sheet.dart';
@@ -54,6 +55,17 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   LatLng? _lastLandmarksCenter;
   Timer? _landmarksRetry;
   int _landmarksRetries = 0;
+
+  // "Cómo llegar" dentro del mapa (ruta de OpenStreetMap)
+  final RoutingService _routing = RoutingService();
+  LatLng? _routeTarget;
+  String? _routeTargetName;
+  RouteResult? _route;
+  RouteMode _routeMode = RouteMode.walk;
+  bool _routeLoading = false;
+  bool _routeFailed = false;
+  bool _showRouteSteps = false;
+  LatLng? _routeFrom; // desde dónde se calculó (para recalcular si te desviás)
 
   // CARTO's free anonymous basemap tiles now require an API key, so dark
   // mode is faked with a color-inversion filter over plain OSM tiles —
@@ -146,6 +158,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void _onLocationUpdate(Position position) {
     final newLocation = LatLng(position.latitude, position.longitude);
     setState(() => _currentPosition = newLocation);
+    _followRoute(newLocation);
     context.read<MapBloc>().add(UpdateUserLocation(location: newLocation));
     _triggerNearbyNotification(newLocation);
     GetIt.instance<AnalyticsService>()
@@ -182,6 +195,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           _buildMapControls(),
           _buildNearbyPanel(),
           if (_selectedCommerceId != null) _buildCommerceSheet(),
+          if (_routeTarget != null) _buildRoutePanel(),
         ],
       ),
     );
@@ -236,6 +250,30 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               userAgentPackageName: 'com.shinracity.app',
             ),
           CircleLayer(circles: _circles),
+          if (_route != null)
+            PolylineLayer(
+              polylines: [
+                Polyline(
+                  points: _route!.points,
+                  strokeWidth: 6,
+                  color: AppColors.primary,
+                  borderStrokeWidth: 2,
+                  borderColor: Colors.black.withValues(alpha: 0.5),
+                ),
+              ],
+            ),
+          if (_routeTarget != null)
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: _routeTarget!,
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.topCenter,
+                  child: const Icon(Icons.location_on, color: AppColors.primary, size: 40),
+                ),
+              ],
+            ),
           // debajo de los comercios, para que no tapen sus marcadores
           if (_showLandmarks) MarkerLayer(markers: _buildLandmarkMarkers()),
           MarkerLayer(markers: _markers),
@@ -302,7 +340,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   Widget _buildMapControls() {
     return Positioned(
       right: 16,
-      bottom: _showNearbyPanel ? 300 : 100,
+      bottom: _routeTarget != null
+          ? (_showRouteSteps ? 440 : 230)
+          : (_showNearbyPanel ? 300 : 100),
       child: Column(
         children: [
           _buildControlButton(
@@ -405,6 +445,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         commerceId: _selectedCommerceId!,
         userLocation: _currentPosition,
         onClose: () => setState(() => _selectedCommerceId = null),
+        onDirections: _startRoute,
       ),
     );
   }
@@ -710,6 +751,274 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     }
   }
 
+  // ─── Ruta dentro del mapa ─────────────────────────────────────────────────
+
+  void _startRoute(LatLng target, String name) {
+    setState(() {
+      _routeTarget = target;
+      _routeTargetName = name;
+      _route = null;
+      _showRouteSteps = false;
+      _selectedCommerceId = null;
+      _showNearbyPanel = false;
+    });
+    _calculateRoute(fitCamera: true);
+  }
+
+  Future<void> _calculateRoute({bool fitCamera = false}) async {
+    final target = _routeTarget;
+    if (target == null) return;
+    final from = _currentPosition;
+    setState(() {
+      _routeLoading = true;
+      _routeFailed = false;
+    });
+    try {
+      final route = await _routing.route(from, target, _routeMode);
+      if (!mounted || _routeTarget != target) return;
+      setState(() {
+        _route = route;
+        _routeFrom = from;
+        _routeLoading = false;
+      });
+      if (fitCamera && route.points.length > 1) {
+        _mapController.fitCamera(CameraFit.bounds(
+          bounds: LatLngBounds.fromPoints([...route.points, from]),
+          padding: const EdgeInsets.fromLTRB(40, 200, 90, 300),
+        ));
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _routeLoading = false;
+        _routeFailed = true;
+      });
+    }
+  }
+
+  void _setRouteMode(RouteMode mode) {
+    if (mode == _routeMode) return;
+    setState(() => _routeMode = mode);
+    _calculateRoute(fitCamera: true);
+  }
+
+  void _endRoute() {
+    setState(() {
+      _routeTarget = null;
+      _routeTargetName = null;
+      _route = null;
+      _routeFrom = null;
+      _routeFailed = false;
+      _showRouteSteps = false;
+    });
+  }
+
+  /// Con la ruta activa: avisa al llegar y recalcula si te desviaste.
+  void _followRoute(LatLng position) {
+    final target = _routeTarget;
+    if (target == null) return;
+    const d = Distance();
+    if (d.as(LengthUnit.Meter, position, target) < 25) {
+      final name = _routeTargetName ?? 'destino';
+      _endRoute();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('¡Llegaste a $name!'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.success,
+      ));
+      return;
+    }
+    final from = _routeFrom;
+    if (!_routeLoading && from != null && d.as(LengthUnit.Meter, position, from) > 60) {
+      _calculateRoute();
+    }
+  }
+
+  Widget _buildRoutePanel() {
+    final route = _route;
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+        decoration: BoxDecoration(
+          color: AppColors.backgroundCard,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 12)],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.flag, color: AppColors.primary, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _routeTargetName ?? 'Destino',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.titleMedium
+                        .copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Terminar ruta',
+                  icon: const Icon(Icons.close, color: Colors.white70),
+                  onPressed: _endRoute,
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                for (final mode in RouteMode.values) ...[
+                  ChoiceChip(
+                    label: Text(mode.label),
+                    avatar: Icon(
+                      mode == RouteMode.walk ? Icons.directions_walk : Icons.directions_car,
+                      size: 18,
+                      color: _routeMode == mode ? AppColors.backgroundDark : Colors.white70,
+                    ),
+                    selected: _routeMode == mode,
+                    showCheckmark: false,
+                    selectedColor: AppColors.primary,
+                    backgroundColor: AppColors.backgroundDark,
+                    labelStyle: TextStyle(
+                      color: _routeMode == mode ? AppColors.backgroundDark : Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onSelected: (_) => _setRouteMode(mode),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                const Spacer(),
+                if (_routeLoading)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else if (route != null)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        formatDuration(route.durationSeconds),
+                        style: AppTextStyles.titleMedium
+                            .copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        formatDistance(route.distanceMeters),
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: AppColors.textSecondaryDark),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+            if (_routeFailed) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'No se pudo calcular la ruta.',
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+                    ),
+                  ),
+                  TextButton(onPressed: _calculateRoute, child: const Text('Reintentar')),
+                  TextButton(
+                    onPressed: () => _openInGoogleMaps(_routeTarget!),
+                    child: const Text('Google Maps'),
+                  ),
+                ],
+              ),
+            ],
+            if (route != null && route.steps.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              InkWell(
+                onTap: () => setState(() => _showRouteSteps = !_showRouteSteps),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.turn_right, color: Colors.white70, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          // la primera indicación que no sea "Salí"
+                          route.steps.length > 1
+                              ? route.steps[1].instruction
+                              : route.steps.first.instruction,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+                        ),
+                      ),
+                      Text(
+                        _showRouteSteps ? 'Ocultar' : 'Ver pasos',
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (_showRouteSteps)
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 220),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    itemCount: route.steps.length,
+                    itemBuilder: (_, i) {
+                      final s = route.steps[i];
+                      return ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          radius: 12,
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                          child: Text('${i + 1}',
+                              style: const TextStyle(color: AppColors.primary, fontSize: 11)),
+                        ),
+                        title: Text(s.instruction,
+                            style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
+                        trailing: s.distanceMeters > 0
+                            ? Text(formatDistance(s.distanceMeters),
+                                style: AppTextStyles.bodySmall
+                                    .copyWith(color: AppColors.textSecondaryDark))
+                            : null,
+                        onTap: () => _mapController.move(s.location, 18),
+                      );
+                    },
+                  ),
+                ),
+            ],
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Rutas: © colaboradores de OpenStreetMap',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.textSecondaryDark, fontSize: 10),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openInGoogleMaps(LatLng target) {
+    launchUrl(
+      Uri.parse('https://www.google.com/maps/dir/?api=1'
+          '&destination=${target.latitude},${target.longitude}'
+          '&travelmode=${_routeMode == RouteMode.walk ? 'walking' : 'driving'}'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
   void _toggleLandmarks() {
     setState(() => _showLandmarks = !_showLandmarks);
     if (_showLandmarks) {
@@ -812,13 +1121,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   label: const Text('Cómo llegar'),
                   onPressed: () {
                     Navigator.pop(sheetContext);
-                    launchUrl(
-                      Uri.parse(
-                        'https://www.google.com/maps/dir/?api=1'
-                        '&destination=${l.location.latitude},${l.location.longitude}',
-                      ),
-                      mode: LaunchMode.externalApplication,
-                    );
+                    _startRoute(l.location, l.name);
                   },
                 ),
               ),

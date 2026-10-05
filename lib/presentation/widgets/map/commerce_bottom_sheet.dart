@@ -14,12 +14,15 @@ class CommerceBottomSheet extends StatelessWidget {
   final String commerceId;
   final LatLng userLocation;
   final VoidCallback onClose;
+  /// Si está, "Ir" traza la ruta en el mapa de la app; si no, abre Google Maps.
+  final void Function(LatLng destination, String name)? onDirections;
 
   const CommerceBottomSheet({
     super.key,
     required this.commerceId,
     required this.userLocation,
     required this.onClose,
+    this.onDirections,
   });
 
   @override
@@ -307,7 +310,9 @@ class CommerceBottomSheet extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: () => _openInMaps(commerce.location),
+            onPressed: () => onDirections != null
+                ? onDirections!(commerce.location, commerce.name)
+                : _openInMaps(commerce.location),
             icon: const Icon(Icons.directions, size: 18),
             label: const Text('Ir'),
             style: OutlinedButton.styleFrom(
