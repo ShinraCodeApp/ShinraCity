@@ -52,6 +52,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   List<Landmark> _landmarks = [];
   bool _showLandmarks = true;
   LatLng? _lastLandmarksCenter;
+  Timer? _landmarksRetry;
+  int _landmarksRetries = 0;
 
   // CARTO's free anonymous basemap tiles now require an API key, so dark
   // mode is faked with a color-inversion filter over plain OSM tiles —
@@ -83,6 +85,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _cameraDebounce?.cancel();
+    _landmarksRetry?.cancel();
     _pulseController.dispose();
     _locationStream?.cancel();
     super.dispose();
@@ -692,9 +695,18 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         }
         _landmarks = byId.values.toList();
       });
+      _landmarksRetries = 0;
     } catch (_) {
-      // sin internet o Overpass saturado: el mapa sigue andando sin lugares
+      // sin internet o todos los servidores saturados: el mapa sigue andando
+      // sin lugares y se reintenta solo un par de veces
       _lastLandmarksCenter = null;
+      if (_landmarksRetries < 3 && mounted) {
+        _landmarksRetries++;
+        _landmarksRetry?.cancel();
+        _landmarksRetry = Timer(const Duration(seconds: 20), () {
+          if (mounted) _loadLandmarks(_mapController.camera.center);
+        });
+      }
     }
   }
 

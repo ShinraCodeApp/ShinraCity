@@ -1,7 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Plazas, parques, monumentos, museos y otros lugares de interés cercanos,
 /// tomados de OpenStreetMap con la API pública de Overpass (gratis, sin key).
@@ -61,32 +64,78 @@ class Landmark {
     this.description,
     this.wikipedia,
   });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'n': name,
+        't': type.name,
+        'la': location.latitude,
+        'lo': location.longitude,
+        if (description != null) 'd': description,
+        if (wikipedia != null) 'w': wikipedia,
+      };
+
+  factory Landmark.fromJson(Map<String, dynamic> j) => Landmark(
+        id: j['id'] as String,
+        name: j['n'] as String,
+        type: LandmarkType.values.byName(j['t'] as String),
+        location: LatLng((j['la'] as num).toDouble(), (j['lo'] as num).toDouble()),
+        description: j['d'] as String?,
+        wikipedia: j['w'] as String?,
+      );
+}
+
+/// Dónde se guardan los lugares entre sesiones (por defecto SharedPreferences).
+abstract class LandmarksStore {
+  Future<String?> read(String key);
+  Future<void> write(String key, String value);
+}
+
+class SharedPrefsLandmarksStore implements LandmarksStore {
+  @override
+  Future<String?> read(String key) async =>
+      (await SharedPreferences.getInstance()).getString(key);
+
+  @override
+  Future<void> write(String key, String value) async =>
+      (await SharedPreferences.getInstance()).setString(key, value);
 }
 
 class LandmarksService {
-  // Servidores públicos de Overpass; si uno falla se prueba el otro.
-  static const _endpoints = [
+  // Servidores públicos de Overpass. Suelen estar saturados, así que se
+  // consultan todos a la vez y gana el primero que responde bien.
+  static const endpoints = [
     'https://overpass-api.de/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
   ];
 
-  final Dio _dio;
+  // Las plazas y monumentos casi no cambian: lo descargado sirve una semana.
+  static const cacheTtl = Duration(days: 7);
 
-  LandmarksService({Dio? dio})
+  final Dio _dio;
+  final LandmarksStore? _store;
+
+  LandmarksService({Dio? dio, LandmarksStore? store, bool persist = true})
       : _dio = dio ??
             Dio(BaseOptions(
               connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 30),
+              receiveTimeout: const Duration(seconds: 35),
               headers: {'User-Agent': 'ShinraCity/1.0 (com.shinracity.app)'},
-            ));
+            )),
+        _store = store ?? (persist ? SharedPrefsLandmarksStore() : null);
 
-  // Caché por zona (~1 km) para no repetir la consulta al mover el mapa.
+  // Caché en memoria por zona (~1 km) para no repetir la consulta al mover el mapa.
   final Map<String, List<Landmark>> _cache = {};
 
   Future<List<Landmark>> nearby(LatLng center, {int radiusMeters = 2000}) async {
     final key = '${center.latitude.toStringAsFixed(2)},${center.longitude.toStringAsFixed(2)}';
-    final cached = _cache[key];
-    if (cached != null) return cached;
+    final cached = _cache[key] ?? await _readStored(key);
+    if (cached != null) {
+      _cache[key] = cached;
+      return cached;
+    }
 
     // Recuadro alrededor del centro: Overpass lo resuelve mucho más rápido
     // que "around". 1° de latitud ≈ 111 km.
@@ -109,27 +158,70 @@ class LandmarksService {
 out center 150;
 ''';
 
+    final result = await _firstSuccessful(query);
+    _cache[key] = result;
+    await _writeStored(key, result);
+    return result;
+  }
+
+  /// Consulta todos los servidores a la vez; devuelve la primera respuesta
+  /// válida y solo falla si fallan todos.
+  Future<List<Landmark>> _firstSuccessful(String query) {
+    final done = Completer<List<Landmark>>();
+    var failures = 0;
     Object? lastError;
-    for (final url in _endpoints) {
-      try {
-        final res = await _dio.post<Map<String, dynamic>>(
-          url,
-          data: {'data': query},
-          options: Options(contentType: Headers.formUrlEncodedContentType),
-        );
-        final elements = res.data?['elements'] as List? ?? const [];
-        // saturado: a veces responde 200 con un "remark" de error y sin datos
-        if (elements.isEmpty && res.data?['remark'] != null) {
-          throw Exception('Overpass: ${res.data!['remark']}');
-        }
-        final result = _parse(elements);
-        _cache[key] = result;
-        return result;
-      } catch (e) {
+    for (final url in endpoints) {
+      _fetch(url, query).then((result) {
+        if (!done.isCompleted) done.complete(result);
+      }).catchError((Object e) {
         lastError = e;
-      }
+        if (++failures == endpoints.length && !done.isCompleted) {
+          done.completeError(lastError ?? Exception('No se pudieron cargar los lugares'));
+        }
+      });
     }
-    throw lastError ?? Exception('No se pudieron cargar los lugares');
+    return done.future;
+  }
+
+  Future<List<Landmark>> _fetch(String url, String query) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      url,
+      data: {'data': query},
+      options: Options(contentType: Headers.formUrlEncodedContentType),
+    );
+    final elements = res.data?['elements'] as List? ?? const [];
+    // saturado: a veces responde 200 con un "remark" de error y sin datos
+    if (elements.isEmpty && res.data?['remark'] != null) {
+      throw Exception('Overpass: ${res.data!['remark']}');
+    }
+    return _parse(elements);
+  }
+
+  Future<List<Landmark>?> _readStored(String key) async {
+    try {
+      final raw = await _store?.read('landmarks_v1_$key');
+      if (raw == null) return null;
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      final savedAt = DateTime.fromMillisecondsSinceEpoch(json['t'] as int);
+      if (DateTime.now().difference(savedAt) > cacheTtl) return null;
+      return (json['items'] as List)
+          .map((e) => Landmark.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return null; // caché corrupta: se vuelve a descargar
+    }
+  }
+
+  Future<void> _writeStored(String key, List<Landmark> items) async {
+    try {
+      await _store?.write(
+        'landmarks_v1_$key',
+        jsonEncode({
+          't': DateTime.now().millisecondsSinceEpoch,
+          'items': items.map((l) => l.toJson()).toList(),
+        }),
+      );
+    } catch (_) {}
   }
 
   List<Landmark> _parse(List elements) {
