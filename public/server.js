@@ -4,6 +4,26 @@ const admin   = require('firebase-admin');
 
 const app = express();
 app.use(express.json());
+
+// El panel ahora se publica en Firebase Hosting y llama a este servidor (Render)
+// solo para cambiar contraseñas y borrar usuarios: permitir esos orígenes.
+const ALLOWED_ORIGINS = [
+  'https://shinra-city.web.app',
+  'https://shinra-city.firebaseapp.com',
+];
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+// Para despertar el servidor gratis de Render antes de usarlo
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.use(express.static(__dirname));
 
 // Initialize Firebase Admin SDK using individual env vars (more reliable on Railway)

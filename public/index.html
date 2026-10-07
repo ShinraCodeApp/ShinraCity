@@ -429,6 +429,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
+// El panel se publica en Firebase Hosting (siempre en línea, gratis). Cambiar
+// contraseñas y borrar usuarios necesita el SDK de administración, que corre en
+// un servidor chico en Render (se duerme sin uso: la primera vez tarda ~1 min).
+const ADMIN_API = /(web\.app|firebaseapp\.com)$/.test(location.hostname)
+  ? 'https://shinracity-admin.onrender.com'
+  : '';
+if (ADMIN_API) fetch(ADMIN_API + '/api/health').catch(() => {});
+
   firebase.initializeApp({
     apiKey: "AIzaSyB4mSx5CpV3TPwU3uvI7X9fyP0ZymbC3t4",
     authDomain: "shinra-city.firebaseapp.com",
@@ -1316,7 +1324,7 @@ async function saveEditUser() {
     let pwdWarning = null;
     if (newPassword.length >= 6) {
       const idToken = await auth.currentUser.getIdToken(true);
-      const res = await fetch('/api/update-password', {
+      const res = await fetch(ADMIN_API + '/api/update-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
         body: JSON.stringify({ uid, password: newPassword }),
@@ -1361,7 +1369,7 @@ async function deleteUserAccount() {
     await db.collection('users').doc(uid).delete();
     // Delete from Firebase Auth via server
     const idToken = await auth.currentUser.getIdToken(true);
-    const res = await fetch('/api/delete-user', {
+    const res = await fetch(ADMIN_API + '/api/delete-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
       body: JSON.stringify({ uid }),

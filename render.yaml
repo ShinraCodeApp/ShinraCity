@@ -1,0 +1,21 @@
+# Render (plan gratis): servidor chico del panel de admin de ShinraCity.
+# Solo cambia contraseñas y borra usuarios (Firebase Admin SDK); el panel en sí
+# y las páginas de privacidad/términos están en Firebase Hosting
+# (https://shinra-city.web.app). Reemplaza al servicio de Railway.
+services:
+  - type: web
+    name: shinracity-admin
+    runtime: node
+    plan: free
+    region: ohio
+    rootDir: public
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # Firebase Console → Configuración del proyecto → Cuentas de servicio →
+      # "Generar nueva clave privada". Pegar el JSON completo (no se sube a GitHub).
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
